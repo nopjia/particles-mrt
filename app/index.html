@@ -7,7 +7,18 @@
   <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
-  <div id="webgl-container" class="gradient-bg-gray-black"></div>
+  <div id="webgl-container" class="gradient-bg-gray-black">
+    <canvas id="webgl-canvas"></canvas>
+  </div>
 </body>
+
+<script type="text/javascript">
+    var gliEmbedDebug = true;
+</script>
+
+<!-- TODO: remove this gl-matrix.js include -->
+<script data-main="js/main" src="js/vendor/gl-matrix.js"></script>
 <script data-main="js/main" src="js/vendor/require.js"></script>
+
+
 </html>

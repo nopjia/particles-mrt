@@ -2,6 +2,7 @@ define([
   "jquery",
   "shortcut",
   "graphics",
+  "requestAnimationFrame"
   ],
   function(
     ignore,
@@ -11,14 +12,15 @@ define([
 
   var App = {
 
+    stats: null,
+
     init: function() {
-      g.init($("#webgl-container")[0]);
+      g.init($("#webgl-canvas")[0]);
       this.update();
     },
 
     update: function() {
       requestAnimationFrame(App.update);
-
       g.update();
     }
 

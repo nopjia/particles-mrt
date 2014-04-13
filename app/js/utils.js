@@ -2,7 +2,7 @@ define([], function() {
 
   var Utils = {
 
-    loadTextFile: function (url) {
+    loadTextFile: function(url) {
       var result;
       
       $.ajax({

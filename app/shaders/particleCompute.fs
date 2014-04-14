@@ -1,3 +1,5 @@
+#extension GL_EXT_draw_buffers : require
+
 #ifdef GL_ES
 precision highp float;
 #endif

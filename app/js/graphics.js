@@ -36,6 +36,17 @@ define([
           uProjectionMat: { value: null },
           uTexture0: { value: null },
         }
+      },
+      particleCompute: {
+        vsFileName: "shaders/particleCompute.vs",
+        fsFileName: "shaders/particleCompute.fs",
+        attributes: {
+          aPosition: {}
+        },
+        uniforms: {
+          uResolution: { value: vec2.create() },
+          uTexture0: { value: null },
+        }
       }
     },
 
@@ -66,18 +77,32 @@ define([
           0.0, 1.0,
           0.0, 0.0,
         ])
+      },
+      fullScreenQuadPos: {
+        size: 3,
+        count: 6,
+        vertices: new Float32Array([
+         -1.0, -1.0,  0.0,
+          1.0,  1.0,  0.0,
+         -1.0,  1.0,  0.0,
+         -1.0, -1.0,  0.0,
+          1.0, -1.0,  0.0,
+          1.0,  1.0,  0.0,
+        ])
       }
     },
 
     projectionMat: mat4.create(),
     viewMat: mat4.create(),
 
+    particleComputeBuffer: {
+      width: 512,
+      height: 512
+    },
+
     init: function(canvas) {
       this.canvas = canvas;
-      this.width = this.canvas.offsetWidth;
-      this.height = this.canvas.offsetHeight;
-      this.canvas.width = this.width;
-      this.canvas.height = this.height;
+      this.onWindowResize();
 
       // init stats
       this.stats = new Stats();
@@ -96,9 +121,25 @@ define([
       this.initShaders();
       this.initBuffers();
       this.testTexture = this.loadTexture("images/test-spectrum.png",
-        gl.NEAREST, gl.NEAREST,
+        gl.LINEAR, gl.NEAREST,
         gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
         false);
+      this.initFrameBuffer();
+    },
+
+    update: function(elapsedTime) {
+      this.stats.update();
+
+      this.logicUpdate();
+      this.drawToFrameBuffer();
+      this.draw();
+    },
+
+    onWindowResize: function() {
+      this.width = this.canvas.offsetWidth;
+      this.height = this.canvas.offsetHeight;
+      this.canvas.width = this.width;
+      this.canvas.height = this.height;
     },
 
     initGL: function() {
@@ -111,11 +152,11 @@ define([
         return false;
       }
 
-      gl.viewport(0, 0, this.width, this.height);
       gl.clearColor(0.0, 0.0, 0.0, 0.0);
 
       var blend = true;
       if (blend) {
+        gl.disable(gl.DEPTH_TEST);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       }
@@ -170,6 +211,7 @@ define([
     initShaders: function() {
       for (var shaderName in this.shaders) {
         this.compileShader(this.shaders[shaderName]);
+        console.log("compiled shader "+shaderName);
         console.log(this.shaders[shaderName]);
       }
     },
@@ -187,6 +229,48 @@ define([
       }
     },
 
+    initFrameBuffer: function() {
+      // NOTE: no depth, not generating renderbuffer for depth
+
+      // init texture
+      this.particleComputeBuffer.texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
+        this.particleComputeBuffer.width, this.particleComputeBuffer.height,
+        0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      // init frame buffer
+      this.particleComputeBuffer.frameBuffer = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D,
+        this.particleComputeBuffer.texture, 0);
+
+      if (!gl.isFramebuffer(this.particleComputeBuffer.frameBuffer)) {
+        console.error("Frame buffer failed");
+      }
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+      console.log("frame buffer initialized");
+      console.log(this.particleComputeBuffer);
+
+      // set resolution uniform
+      this.shaders.particleCompute.uniforms.uResolution.value[0] = this.particleComputeBuffer.width;
+      this.shaders.particleCompute.uniforms.uResolution.value[1] = this.particleComputeBuffer.height;
+
+      gl.useProgram(this.shaders.particleCompute.program);
+      gl.uniform2f(
+        this.shaders.particleCompute.uniforms.uResolution.location,
+        this.shaders.particleCompute.uniforms.uResolution.value[0],
+        this.shaders.particleCompute.uniforms.uResolution.value[1]);
+      gl.useProgram(null);
+    },
+
     loadTexture: function(fileName, nearFilter, farFilter, wrapS, wrapT, generateMipmap) {
       var texture = {};
       texture.texture = gl.createTexture();
@@ -201,6 +285,7 @@ define([
         if (generateMipmap)
           gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, null);
+        console.log("loaded texture "+fileName);
         console.log(texture);
       };
       texture.image.src = fileName;
@@ -208,9 +293,7 @@ define([
       return texture;
     },
 
-    update: function(elapsedTime) {
-      this.stats.update();
-
+    logicUpdate: function() {
       // perspective
       mat4.perspective(this.projectionMat, 45, this.width / this.height, 0.1, 100.0);
 
@@ -220,6 +303,9 @@ define([
 
       for (var shaderName in this.shaders) {
         var shader = this.shaders[shaderName];
+
+        if (!shader.uniforms.uProjectionMat || !shader.uniforms.uViewMat)
+          continue;
 
         shader.uniforms.uProjectionMat.value = this.projectionMat;
         shader.uniforms.uViewMat.value = this.viewMat;
@@ -232,11 +318,38 @@ define([
 
       // test animate
       mat4.rotateY(modelMat, modelMat, 0.1);
+    },
 
-      this.draw();
+    drawToFrameBuffer: function() {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
+
+      gl.viewport(0, 0, this.particleComputeBuffer.width, this.particleComputeBuffer.height);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      // make sure no DEPTH_TEST
+
+      gl.useProgram(this.shaders.particleCompute.program);
+
+      gl.enableVertexAttribArray(this.shaders.particleCompute.attributes.aPosition.location);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.fullScreenQuadPos.buffer);
+      gl.vertexAttribPointer(
+        this.shaders.particleCompute.attributes.aPosition.location,
+        this.vertexBuffers.fullScreenQuadPos.size, gl.FLOAT, false, 0, 0);
+
+      gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.fullScreenQuadPos.count);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+      gl.disableVertexAttribArray(this.shaders.particleCompute.attributes.aPosition.location);
+
+      gl.useProgram(null);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     },
 
     draw: function() {
+      gl.viewport(0, 0, this.width, this.height);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       
       // use shader program
@@ -266,7 +379,7 @@ define([
 
       // bind texture
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.testTexture.texture);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.texture);
       gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
 
       gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.particlePos.count);
@@ -283,14 +396,6 @@ define([
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       gl.useProgram(null);
-    },
-
-    onWindowResize: function() {
-      this.width = this.canvas.offsetWidth;
-      this.height = this.canvas.offsetHeight;
-      this.canvas.width = this.width;
-      this.canvas.height = this.height;
-      gl.viewport(0, 0, this.width, this.height);
     }
   };
 

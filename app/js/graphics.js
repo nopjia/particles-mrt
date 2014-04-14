@@ -28,11 +28,13 @@ define([
         attributes: {
           aPosition: {},
           aColor: {},
+          aUV: {},
         },
         uniforms: {
           uModelMat: { value: null },
           uViewMat: { value: null },
           uProjectionMat: { value: null },
+          uTexture0: { value: null },
         }
       }
     },
@@ -54,6 +56,15 @@ define([
           1.0, 0.0, 0.0, 1.0,
           0.0, 1.0, 0.0, 1.0,
           0.0, 0.0, 1.0, 1.0
+        ])
+      },
+      particleUV: {
+        size: 2,
+        count: 3,
+        vertices: new Float32Array([
+          1.0, 0.0,
+          0.0, 1.0,
+          0.0, 0.0,
         ])
       }
     },
@@ -84,7 +95,10 @@ define([
       this.initGL();
       this.initShaders();
       this.initBuffers();
-      this.draw();
+      this.testTexture = this.loadTexture("images/test-spectrum.png",
+        gl.NEAREST, gl.NEAREST,
+        gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+        false);
     },
 
     initGL: function() {
@@ -165,6 +179,27 @@ define([
       }
     },
 
+    loadTexture: function(fileName, nearFilter, farFilter, wrapS, wrapT, generateMipmap) {
+      var texture = {};
+      texture.texture = gl.createTexture();
+      texture.image = new Image();
+      texture.image.onload = function() {
+        gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, nearFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, farFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
+        if (generateMipmap)
+          gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        console.log(texture);
+      };
+      texture.image.src = fileName;
+
+      return texture;
+    },
+
     update: function(elapsedTime) {
       this.stats.update();
 
@@ -196,12 +231,16 @@ define([
     draw: function() {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       
+      // use shader program
       gl.useProgram(this.shaders.particle.program);
       gl.uniformMatrix4fv(this.shaders.particle.uniforms.uModelMat.location, false, modelMat);
 
+      // enable vbos
       gl.enableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
       gl.enableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
+      gl.enableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
+      // bind vbos
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particlePos.buffer);
       gl.vertexAttribPointer(
         this.shaders.particle.attributes.aPosition.location,
@@ -212,10 +251,26 @@ define([
         this.shaders.particle.attributes.aColor.location,
         this.vertexBuffers.particleCol.size, gl.FLOAT, false, 0, 0);
 
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particleUV.buffer);
+      gl.vertexAttribPointer(
+        this.shaders.particle.attributes.aUV.location,
+        this.vertexBuffers.particleUV.size, gl.FLOAT, false, 0, 0);
+
+      // bind texture
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.testTexture.texture);
+      gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
+
       gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.particlePos.count);
+
+      // cleanup
+
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.activeTexture(gl.FALSE);
 
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
+      gl.disableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       gl.useProgram(null);
 

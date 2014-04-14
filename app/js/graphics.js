@@ -53,9 +53,9 @@ define([
         size: 4,
         count: 3,
         vertices: new Float32Array([
-          1.0, 0.0, 0.0, 1.0,
-          0.0, 1.0, 0.0, 1.0,
-          0.0, 0.0, 1.0, 1.0
+          1.0, 1.0, 1.0, 1.0,
+          1.0, 1.0, 1.0, 1.0,
+          1.0, 1.0, 1.0, 0.0
         ])
       },
       particleUV: {
@@ -113,7 +113,15 @@ define([
 
       gl.viewport(0, 0, this.width, this.height);
       gl.clearColor(0.0, 0.0, 0.0, 0.0);
-      gl.enable(gl.DEPTH_TEST);
+
+      var blend = true;
+      if (blend) {
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      }
+      else {
+        gl.enable(gl.DEPTH_TEST);
+      }
     },
 
     compileShader: function(shader) {
@@ -268,13 +276,13 @@ define([
       gl.bindTexture(gl.TEXTURE_2D, null);
       // gl.activeTexture(gl.FALSE);
 
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       gl.useProgram(null);
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, null);
     },
 
     onWindowResize: function() {

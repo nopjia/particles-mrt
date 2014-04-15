@@ -12,6 +12,6 @@ require.config({
   }
 });
 
-require(["app", "vendor/gl-inspector/core/embed"], function(App) {
+require(["app"], function(App) {
   App.init();
 });

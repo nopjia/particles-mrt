@@ -8,6 +8,7 @@ define([
   ) {
 
   var gl = null;
+  var ext = null;
 
   var modelMat = mat4.create();
   mat4.identity(modelMat);
@@ -153,6 +154,15 @@ define([
         return false;
       }
 
+      try {
+        ext = gl.getExtension('WEBGL_draw_buffers');
+      } catch(e) {
+      }
+      if (!ext) {
+        console.error("WEBGL_draw_buffers extension not supported");
+        return false;
+      }
+
       gl.clearColor(0.0, 0.0, 0.0, 0.0);
 
       var blend = true;
@@ -235,9 +245,8 @@ define([
 
       // init textures
       for (var i=0; i<this.particleComputeBuffer.textures.length; ++i) {
-        var texture = this.particleComputeBuffer.textures[i];
-        texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+        this.particleComputeBuffer.textures[i] = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[i]);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -253,12 +262,15 @@ define([
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
 
       // hardcoded bind 3 textures
-      var ext = gl.getExtension('WEBGL_draw_buffers');
-      if (!ext)
-        console.error("WEBGL_draw_buffers extension not supported");
       gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT0_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[0], 0);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[1], 0);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[2], 0);
+
+      ext.drawBuffersWEBGL([
+        ext.COLOR_ATTACHMENT0_WEBGL, // gl_FragData[0]
+        ext.COLOR_ATTACHMENT1_WEBGL, // gl_FragData[1]
+        ext.COLOR_ATTACHMENT2_WEBGL, // gl_FragData[2]
+      ]);
 
       if (!gl.isFramebuffer(this.particleComputeBuffer.frameBuffer)) {
         console.error("Frame buffer failed");

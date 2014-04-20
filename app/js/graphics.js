@@ -22,6 +22,8 @@ define([
     width: -1,
     height: -1,
 
+    timer: 0.0,
+
     shaders: {
       particle: {
         vsFileName: "shaders/particle.vs",
@@ -46,6 +48,7 @@ define([
         },
         uniforms: {
           uResolution: { value: vec2.create() },
+          uTime: { value: 0.0 },
           uDeltaT: { value: 0.0 },
           uTexture0: { value: null },
           uTexture1: { value: null },
@@ -134,9 +137,28 @@ define([
         gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
         false);
       this.initFrameBuffer();
+
+      // hardcode once bind texture for particle display
+      gl.useProgram(this.shaders.particle.program);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
+      gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
+
+      // bind textures for particle compute
+      gl.useProgram(this.shaders.particleCompute.program);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[1]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[2]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 2);
+      gl.useProgram(null);
     },
 
     update: function(deltaT) {
+      this.timer += deltaT;
+
       this.stats.update();
 
       this.logicUpdate(deltaT);
@@ -153,7 +175,7 @@ define([
 
     initGL: function() {
       try {
-        gl = this.canvas.getContext("experimental-webgl");
+        gl = this.canvas.getContext("webgl");
       } catch (e) {
       }
       if (!gl) {
@@ -372,8 +394,10 @@ define([
       gl.useProgram(null);
 
       // update particleCompute shader uniforms
+      this.shaders.particleCompute.uniforms.uTime.value = this.timer;
       this.shaders.particleCompute.uniforms.uDeltaT.value = deltaT;
       gl.useProgram(this.shaders.particleCompute.program);
+      gl.uniform1f(this.shaders.particleCompute.uniforms.uTime.location, this.shaders.particleCompute.uniforms.uTime.value);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uDeltaT.location, this.shaders.particleCompute.uniforms.uDeltaT.value);
       gl.useProgram(null);
     },
@@ -395,21 +419,20 @@ define([
         this.shaders.particleCompute.attributes.aPosition.location,
         this.vertexBuffers.fullScreenQuadPos.size, gl.FLOAT, false, 0, 0);
 
-      // bind textures
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 1);
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[1]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 2);
-      gl.activeTexture(gl.TEXTURE3);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[2]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 3);
+      // // bind textures
+      // gl.activeTexture(gl.TEXTURE1);
+      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
+      // gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 1);
+      // gl.activeTexture(gl.TEXTURE2);
+      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[1]);
+      // gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 2);
+      // gl.activeTexture(gl.TEXTURE3);
+      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[2]);
+      // gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 3);
 
       gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.fullScreenQuadPos.count);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
-      gl.bindTexture(gl.TEXTURE_2D, null);
       gl.disableVertexAttribArray(this.shaders.particleCompute.attributes.aPosition.location);
       gl.useProgram(null);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -443,16 +466,16 @@ define([
         this.shaders.particle.attributes.aUV.location,
         this.vertexBuffers.particleUV.size, gl.FLOAT, false, 0, 0);
 
-      // bind texture
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
-      gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
+      // // bind texture
+      // gl.activeTexture(gl.TEXTURE0);
+      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
+      // gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
 
       gl.drawArrays(gl.POINTS, 0, this.vertexBuffers.particleUV.count);
 
       // cleanup
 
-      gl.bindTexture(gl.TEXTURE_2D, null);
+      // gl.bindTexture(gl.TEXTURE_2D, null);
       // gl.activeTexture(gl.FALSE);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, null);

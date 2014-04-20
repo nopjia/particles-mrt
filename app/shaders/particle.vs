@@ -20,7 +20,7 @@ void main() {
 
   gl_PointSize = 3.0;
 
-  vec3 pos = texture2D(uTexture0, vUV).rgb * 5.0;
+  vec3 pos = texture2D(uTexture0, aUV).rgb;
 
   gl_Position = 
     uProjectionMat * uViewMat * uModelMat *

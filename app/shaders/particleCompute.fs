@@ -18,13 +18,11 @@ void main() {
   vec3 vel = texture2D(uTexture1, uv).rgb;
   vec3 testVal = texture2D(uTexture2, uv).rgb;
 
-  vec3 accel = vec3(1.0, 0.0, 0.0);
+  vec3 accel = vec3(0.0, 1.0, 0.0);
 
   // important, order matters
-  // pos += vel * uDeltaT;
-  // vel += accel * uDeltaT;
-
-  pos.y += sin(uTime)/2.0 + 0.5;
+  pos += vel * uDeltaT;
+  vel += accel * uDeltaT;
 
   gl_FragData[0] = vec4(pos, 1.0);
   gl_FragData[1] = vec4(vel, 1.0);

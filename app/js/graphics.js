@@ -102,11 +102,19 @@ define([
     projectionMat: mat4.create(),
     viewMat: mat4.create(),
 
-    particleComputeBuffer: {
-      width: 256,
-      height: 256,
-      textures: new Array(3)
-    },
+    // have two duplicate buffers
+    particleComputeBuffers: [
+      {
+        width: 256,
+        height: 256,
+        textures: new Array(3)
+      },
+      {
+        width: 256,
+        height: 256,
+        textures: new Array(3)
+      }
+    ],
 
     init: function(canvas) {
       this.canvas = canvas;
@@ -136,24 +144,8 @@ define([
         gl.LINEAR, gl.NEAREST,
         gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
         false);
-      this.initFrameBuffer();
-
-      // hardcode once bind texture for particle display
-      gl.useProgram(this.shaders.particle.program);
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
-      gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
-
-      // bind textures for particle compute
-      gl.useProgram(this.shaders.particleCompute.program);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 0);
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[1]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 1);
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[2]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 2);
-      gl.useProgram(null);
+      this.initComputeBuffer(this.particleComputeBuffers[0]);
+      this.initComputeBuffer(this.particleComputeBuffers[1]);
     },
 
     update: function(deltaT) {
@@ -162,7 +154,6 @@ define([
       this.stats.update();
 
       this.logicUpdate(deltaT);
-      this.drawToFrameBuffer();
       this.draw();
     },
 
@@ -292,31 +283,31 @@ define([
       return texture;
     },
 
-    initFrameBuffer: function() {
+    initComputeBuffer: function(buf) {
       // NOTE: no depth, not generating renderbuffer for depth
 
       // init textures
-      for (var i=0; i<this.particleComputeBuffer.textures.length; ++i) {
-        this.particleComputeBuffer.textures[i] = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[i]);
+      for (var i=0; i<buf.textures.length; ++i) {
+        buf.textures[i] = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, buf.textures[i]);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
-          this.particleComputeBuffer.width, this.particleComputeBuffer.height,
+          buf.width, buf.height,
           0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
       }
 
       // init frame buffer
-      this.particleComputeBuffer.frameBuffer = gl.createFramebuffer();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
+      buf.frameBuffer = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, buf.frameBuffer);
 
       // hardcoded bind 3 textures
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT0_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[0], 0);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[1], 0);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[2], 0);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT0_WEBGL, gl.TEXTURE_2D, buf.textures[0], 0);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, buf.textures[1], 0);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, buf.textures[2], 0);
 
       ext.drawBuffersWEBGL([
         ext.COLOR_ATTACHMENT0_WEBGL, // gl_FragData[0]
@@ -324,18 +315,18 @@ define([
         ext.COLOR_ATTACHMENT2_WEBGL, // gl_FragData[2]
       ]);
 
-      if (!gl.isFramebuffer(this.particleComputeBuffer.frameBuffer)) {
+      if (!gl.isFramebuffer(buf.frameBuffer)) {
         console.error("Frame buffer failed");
       }
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
       console.log("frame buffer initialized");
-      console.log(this.particleComputeBuffer);
+      console.log(buf);
 
       // set resolution uniform
-      this.shaders.particleCompute.uniforms.uResolution.value[0] = this.particleComputeBuffer.width;
-      this.shaders.particleCompute.uniforms.uResolution.value[1] = this.particleComputeBuffer.height;
+      this.shaders.particleCompute.uniforms.uResolution.value[0] = buf.width;
+      this.shaders.particleCompute.uniforms.uResolution.value[1] = buf.height;
 
       gl.useProgram(this.shaders.particleCompute.program);
       gl.uniform2f(
@@ -346,14 +337,17 @@ define([
     },
 
     generateParticleVertexData: function() {
+      var width = this.particleComputeBuffers[0].width;
+      var height = this.particleComputeBuffers[0].height;
+
       this.vertexBuffers.particleUV.size = 2;
-      this.vertexBuffers.particleUV.count = this.particleComputeBuffer.width * this.particleComputeBuffer.height;
+      this.vertexBuffers.particleUV.count = width * height;
 
       var uvArray = [];
-      for (var y=0; y<this.particleComputeBuffer.height; ++y) {
-        for (var x=0; x<this.particleComputeBuffer.width; ++x) {
-          uvArray.push(x/this.particleComputeBuffer.width);
-          uvArray.push(y/this.particleComputeBuffer.height);
+      for (var y=0; y<height; ++y) {
+        for (var x=0; x<width; ++x) {
+          uvArray.push(x/width);
+          uvArray.push(y/height);
         }
       }
 
@@ -402,10 +396,10 @@ define([
       gl.useProgram(null);
     },
 
-    drawToFrameBuffer: function() {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
+    drawComputeBuffer: function(fromBuf, toBuf) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, toBuf.frameBuffer);
 
-      gl.viewport(0, 0, this.particleComputeBuffer.width, this.particleComputeBuffer.height);
+      gl.viewport(0, 0, toBuf.width, toBuf.height);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       // make sure no DEPTH_TEST
@@ -419,16 +413,16 @@ define([
         this.shaders.particleCompute.attributes.aPosition.location,
         this.vertexBuffers.fullScreenQuadPos.size, gl.FLOAT, false, 0, 0);
 
-      // // bind textures
-      // gl.activeTexture(gl.TEXTURE1);
-      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
-      // gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 1);
-      // gl.activeTexture(gl.TEXTURE2);
-      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[1]);
-      // gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 2);
-      // gl.activeTexture(gl.TEXTURE3);
-      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[2]);
-      // gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 3);
+      // bind textures
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, fromBuf.textures[0]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, fromBuf.textures[1]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 2);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, fromBuf.textures[2]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 3);
 
       gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.fullScreenQuadPos.count);
 
@@ -439,6 +433,8 @@ define([
     },
 
     draw: function() {
+      this.drawComputeBuffer(this.particleComputeBuffers[0], this.particleComputeBuffers[1]);
+
       gl.viewport(0, 0, this.width, this.height);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       
@@ -466,10 +462,10 @@ define([
         this.shaders.particle.attributes.aUV.location,
         this.vertexBuffers.particleUV.size, gl.FLOAT, false, 0, 0);
 
-      // // bind texture
-      // gl.activeTexture(gl.TEXTURE0);
-      // gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
-      // gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
+      // bind texture
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[1].textures[0]);
+      gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
 
       gl.drawArrays(gl.POINTS, 0, this.vertexBuffers.particleUV.count);
 
@@ -485,6 +481,11 @@ define([
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       gl.useProgram(null);
+
+      // swap compute buffers
+      var tempBuf = this.particleComputeBuffers[0];
+      this.particleComputeBuffers[0] = this.particleComputeBuffers[1];
+      this.particleComputeBuffers[1] = tempBuf;
     }
   };
 

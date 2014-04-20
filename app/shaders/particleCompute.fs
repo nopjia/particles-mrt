@@ -1,5 +1,3 @@
-#extension GL_EXT_draw_buffers : require
-
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -26,7 +24,8 @@ void main() {
 
   pos.y += sin(uTime)/2.0 + 0.5;
 
-  gl_FragData[0] = vec4(pos, 1.0);
-  gl_FragData[1] = vec4(vel, 1.0);
-  gl_FragData[2] = vec4(uv.x, uv.y, 0.0, 1.0);
+  //pos.y += 0.1;
+
+  gl_FragColor = vec4(pos, 1.0);
+  //gl_FragColor = vec4(uv.x, uv.y, 0.0, 1.0);
 }

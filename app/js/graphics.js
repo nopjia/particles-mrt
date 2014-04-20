@@ -138,13 +138,13 @@ define([
         false);
       this.initFrameBuffer();
 
-      // hardcode once bind texture for particle display
+      // hardcode fixed bind texture for particle display
       gl.useProgram(this.shaders.particle.program);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
       gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
 
-      // bind textures for particle compute
+      // fixed bind textures for particle compute
       gl.useProgram(this.shaders.particleCompute.program);
       gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 0);
       gl.activeTexture(gl.TEXTURE1);
@@ -183,14 +183,14 @@ define([
         return false;
       }
 
-      try {
-        ext = gl.getExtension('WEBGL_draw_buffers');
-      } catch(e) {
-      }
-      if (!ext) {
-        console.error("WEBGL_draw_buffers extension not supported");
-        return false;
-      }
+      // try {
+      //   ext = gl.getExtension('WEBGL_draw_buffers');
+      // } catch(e) {
+      // }
+      // if (!ext) {
+      //   console.error("WEBGL_draw_buffers extension not supported");
+      //   return false;
+      // }
 
       gl.clearColor(0.0, 0.0, 0.0, 0.0);
       //gl.enable(gl.POINT_SMOOTH);
@@ -309,20 +309,28 @@ define([
         gl.bindTexture(gl.TEXTURE_2D, null);
       }
 
-      // init frame buffer
-      this.particleComputeBuffer.frameBuffer = gl.createFramebuffer();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
+      if (this.ext) {
+        // init frame buffer
+        this.particleComputeBuffer.frameBuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
 
-      // hardcoded bind 3 textures
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT0_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[0], 0);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[1], 0);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[2], 0);
+        // hardcoded bind 3 textures
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT0_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[0], 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT1_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[1], 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, ext.COLOR_ATTACHMENT2_WEBGL, gl.TEXTURE_2D, this.particleComputeBuffer.textures[2], 0);
 
-      ext.drawBuffersWEBGL([
-        ext.COLOR_ATTACHMENT0_WEBGL, // gl_FragData[0]
-        ext.COLOR_ATTACHMENT1_WEBGL, // gl_FragData[1]
-        ext.COLOR_ATTACHMENT2_WEBGL, // gl_FragData[2]
-      ]);
+        ext.drawBuffersWEBGL([
+          ext.COLOR_ATTACHMENT0_WEBGL, // gl_FragData[0]
+          ext.COLOR_ATTACHMENT1_WEBGL, // gl_FragData[1]
+          ext.COLOR_ATTACHMENT2_WEBGL, // gl_FragData[2]
+        ]);
+      }
+      else {
+        // init frame buffer
+        this.particleComputeBuffer.frameBuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffer.frameBuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.particleComputeBuffer.textures[0], 0);
+      }
 
       if (!gl.isFramebuffer(this.particleComputeBuffer.frameBuffer)) {
         console.error("Frame buffer failed");

@@ -2,7 +2,8 @@ define([
   "jquery",
   "shortcut",
   "graphics",
-  "requestAnimationFrame"
+  "requestAnimationFrame",
+  "clock"
   ],
   function(
     ignore,
@@ -12,16 +13,17 @@ define([
 
   var App = {
 
-    stats: null,
+    clock: null,
 
     init: function() {
       g.init($("#webgl-canvas")[0]);
+      clock = new Clock();
       this.update();
     },
 
     update: function() {
       requestAnimationFrame(App.update);
-      g.update();
+      g.update(clock.getDelta());
     }
 
   };

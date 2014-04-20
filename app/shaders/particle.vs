@@ -15,12 +15,14 @@ uniform mat4 uProjectionMat;
 uniform sampler2D uTexture0;
 
 void main() {
-  // vec3 mvPosition = texture2D(posTex, position.xy).rgb;
-  
-  // gl_PointSize = 1.0;
-
-  vColor = aColor;
+  vColor = vec4(1.0, 1.0, 0.0, 0.1);//aColor;
   vUV = aUV;
 
-  gl_Position = uProjectionMat * uViewMat * uModelMat * vec4(aPosition, 1.0);
+  gl_PointSize = 3.0;
+
+  vec3 pos = texture2D(uTexture0, vUV).rgb * 5.0;
+
+  gl_Position = 
+    uProjectionMat * uViewMat * uModelMat *
+    vec4(pos, 1.0);
 }

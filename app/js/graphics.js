@@ -46,7 +46,10 @@ define([
         },
         uniforms: {
           uResolution: { value: vec2.create() },
+          uDeltaT: { value: 0.0 },
           uTexture0: { value: null },
+          uTexture1: { value: null },
+          uTexture2: { value: null },
         }
       }
     },
@@ -55,7 +58,7 @@ define([
       particlePos: {
         size: 3,
         count: 3,
-        vertices: new Float32Array([
+        data: new Float32Array([
           0.0,  1.0,  0.0,
          -1.0, -1.0,  0.0,
           1.0, -1.0,  0.0
@@ -64,7 +67,7 @@ define([
       particleCol: {
         size: 4,
         count: 3,
-        vertices: new Float32Array([
+        data: new Float32Array([
           1.0, 1.0, 1.0, 1.0,
           1.0, 1.0, 1.0, 1.0,
           1.0, 1.0, 1.0, 0.0
@@ -73,7 +76,7 @@ define([
       particleUV: {
         size: 2,
         count: 3,
-        vertices: new Float32Array([
+        data: new Float32Array([
           1.0, 0.0,
           0.0, 1.0,
           0.0, 0.0,
@@ -82,7 +85,7 @@ define([
       fullScreenQuadPos: {
         size: 3,
         count: 6,
-        vertices: new Float32Array([
+        data: new Float32Array([
          -1.0, -1.0,  0.0,
           1.0,  1.0,  0.0,
          -1.0,  1.0,  0.0,
@@ -97,8 +100,8 @@ define([
     viewMat: mat4.create(),
 
     particleComputeBuffer: {
-      width: 512,
-      height: 512,
+      width: 256,
+      height: 256,
       textures: new Array(3)
     },
 
@@ -113,11 +116,15 @@ define([
       this.stats.domElement.style.zIndex = 100;
       document.body.appendChild( this.stats.domElement );
 
+      this.clock = new Clock();
+
       (function(self) {
         window.addEventListener(
           'resize', function() {self.onWindowResize();}, false
         );
       })(this);
+
+      this.generateParticleVertexData();
 
       this.initGL();
       this.initShaders();
@@ -129,10 +136,10 @@ define([
       this.initFrameBuffer();
     },
 
-    update: function(elapsedTime) {
+    update: function(deltaT) {
       this.stats.update();
 
-      this.logicUpdate();
+      this.logicUpdate(deltaT);
       this.drawToFrameBuffer();
       this.draw();
     },
@@ -164,6 +171,7 @@ define([
       }
 
       gl.clearColor(0.0, 0.0, 0.0, 0.0);
+      //gl.enable(gl.POINT_SMOOTH);
 
       var blend = true;
       if (blend) {
@@ -230,7 +238,7 @@ define([
     prepareVertexBuffer: function(vb) {
       vb.buffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, vb.buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, vb.vertices, gl.STATIC_DRAW);
+      gl.bufferData(gl.ARRAY_BUFFER, vb.data, gl.STATIC_DRAW);
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
     },
 
@@ -238,6 +246,28 @@ define([
       for (var vbName in this.vertexBuffers) {
         this.prepareVertexBuffer(this.vertexBuffers[vbName]);
       }
+    },
+
+    loadTexture: function(fileName, nearFilter, farFilter, wrapS, wrapT, generateMipmap) {
+      var texture = {};
+      texture.texture = gl.createTexture();
+      texture.image = new Image();
+      texture.image.onload = function() {
+        gl.bindTexture(gl.TEXTURE_2D, texture.texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, nearFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, farFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
+        if (generateMipmap)
+          gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        console.log("loaded texture "+fileName);
+        console.log(texture);
+      };
+      texture.image.src = fileName;
+
+      return texture;
     },
 
     initFrameBuffer: function() {
@@ -293,29 +323,24 @@ define([
       gl.useProgram(null);
     },
 
-    loadTexture: function(fileName, nearFilter, farFilter, wrapS, wrapT, generateMipmap) {
-      var texture = {};
-      texture.texture = gl.createTexture();
-      texture.image = new Image();
-      texture.image.onload = function() {
-        gl.bindTexture(gl.TEXTURE_2D, texture.texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, nearFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, farFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
-        if (generateMipmap)
-          gl.generateMipmap(gl.TEXTURE_2D);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        console.log("loaded texture "+fileName);
-        console.log(texture);
-      };
-      texture.image.src = fileName;
+    generateParticleVertexData: function() {
+      this.vertexBuffers.particleUV.size = 2;
+      this.vertexBuffers.particleUV.count = this.particleComputeBuffer.width * this.particleComputeBuffer.height;
 
-      return texture;
+      var uvArray = [];
+      for (var y=0; y<this.particleComputeBuffer.height; ++y) {
+        for (var x=0; x<this.particleComputeBuffer.width; ++x) {
+          uvArray.push(x/this.particleComputeBuffer.width);
+          uvArray.push(y/this.particleComputeBuffer.height);
+        }
+      }
+
+      this.vertexBuffers.particleUV.data = new Float32Array(uvArray);
     },
 
-    logicUpdate: function() {
+    logicUpdate: function(deltaT) {
+      // TODO: auto update shader uniforms from value, through function
+
       // perspective
       mat4.perspective(this.projectionMat, 45, this.width / this.height, 0.1, 100.0);
 
@@ -323,6 +348,7 @@ define([
       mat4.identity(this.viewMat);
       mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -5.0]);
 
+      // update uniforms for view/project matrix
       for (var shaderName in this.shaders) {
         var shader = this.shaders[shaderName];
 
@@ -338,8 +364,18 @@ define([
         gl.useProgram(null);
       }
 
-      // test animate
-      mat4.rotateY(modelMat, modelMat, 0.1);
+      // test animate model matrix
+      mat4.rotateY(modelMat, modelMat, 0.01);
+      this.shaders.particle.uniforms.uModelMat.value = modelMat;
+      gl.useProgram(this.shaders.particle.program);
+      gl.uniformMatrix4fv(this.shaders.particle.uniforms.uModelMat.location, false, this.shaders.particle.uniforms.uModelMat.value);
+      gl.useProgram(null);
+
+      // update particleCompute shader uniforms
+      this.shaders.particleCompute.uniforms.uDeltaT.value = deltaT;
+      gl.useProgram(this.shaders.particleCompute.program);
+      gl.uniform1f(this.shaders.particleCompute.uniforms.uDeltaT.location, this.shaders.particleCompute.uniforms.uDeltaT.value);
+      gl.useProgram(null);
     },
 
     drawToFrameBuffer: function() {
@@ -359,14 +395,23 @@ define([
         this.shaders.particleCompute.attributes.aPosition.location,
         this.vertexBuffers.fullScreenQuadPos.size, gl.FLOAT, false, 0, 0);
 
+      // bind textures
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[1]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 2);
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[2]);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 3);
+
       gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.fullScreenQuadPos.count);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
+      gl.bindTexture(gl.TEXTURE_2D, null);
       gl.disableVertexAttribArray(this.shaders.particleCompute.attributes.aPosition.location);
-
       gl.useProgram(null);
-
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     },
 
@@ -376,23 +421,22 @@ define([
       
       // use shader program
       gl.useProgram(this.shaders.particle.program);
-      gl.uniformMatrix4fv(this.shaders.particle.uniforms.uModelMat.location, false, modelMat);
 
       // enable vbos
-      gl.enableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
-      gl.enableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
+      // gl.enableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
+      // gl.enableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
       gl.enableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       // bind vbos
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particlePos.buffer);
-      gl.vertexAttribPointer(
-        this.shaders.particle.attributes.aPosition.location,
-        this.vertexBuffers.particlePos.size, gl.FLOAT, false, 0, 0);
+      // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particlePos.buffer);
+      // gl.vertexAttribPointer(
+      //   this.shaders.particle.attributes.aPosition.location,
+      //   this.vertexBuffers.particlePos.size, gl.FLOAT, false, 0, 0);
 
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particleCol.buffer);
-      gl.vertexAttribPointer(
-        this.shaders.particle.attributes.aColor.location,
-        this.vertexBuffers.particleCol.size, gl.FLOAT, false, 0, 0);
+      // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particleCol.buffer);
+      // gl.vertexAttribPointer(
+      //   this.shaders.particle.attributes.aColor.location,
+      //   this.vertexBuffers.particleCol.size, gl.FLOAT, false, 0, 0);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particleUV.buffer);
       gl.vertexAttribPointer(
@@ -404,7 +448,7 @@ define([
       gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffer.textures[0]);
       gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
 
-      gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.particlePos.count);
+      gl.drawArrays(gl.POINTS, 0, this.vertexBuffers.particleUV.count);
 
       // cleanup
 
@@ -413,8 +457,8 @@ define([
 
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-      gl.disableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
-      gl.disableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
+      // gl.disableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
+      // gl.disableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       gl.useProgram(null);

@@ -175,6 +175,7 @@ define([
         return false;
       }
 
+      // TODO: do this better
       gl.getExtension('OES_texture_float');
       gl.getExtension('OES_texture_float_linear');
 

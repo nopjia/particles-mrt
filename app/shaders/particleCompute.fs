@@ -16,8 +16,7 @@ precision highp float;
 #define EQUALS(A,B) ( abs((A)-(B)) < EPS )
 #define EQUALSZERO(A) ( ((A)<EPS) && ((A)>-EPS) )
 
-#define K_GRAVITY 1.0
-#define K_UBYTE_UNPACK_RANGE 1.0
+#define K_GRAVITY 0.5
 
 
 //---------------------------------------------------------
@@ -27,6 +26,7 @@ precision highp float;
 uniform vec2 uResolution;
 uniform float uTime;
 uniform float uDeltaT;
+uniform float uMouse;
 uniform sampler2D uTexture0;  // pos
 uniform sampler2D uTexture1;  // vel
 uniform sampler2D uTexture2;  // unused
@@ -41,14 +41,6 @@ float rand(vec2 seed) {
   return fract(sin(dot(seed.xy,vec2(12.9898,78.233))) * 43758.5453);
 }
 
-vec3 unpackUByte(vec3 value) {
-  return value * 2.0*K_UBYTE_UNPACK_RANGE - K_UBYTE_UNPACK_RANGE;
-}
-
-vec3 packUByte(vec3 value) {
-  return (value + K_UBYTE_UNPACK_RANGE) / (2.0*K_UBYTE_UNPACK_RANGE);
-}
-
 //---------------------------------------------------------
 // MAIN
 //---------------------------------------------------------
@@ -57,23 +49,23 @@ void main() {
   vec2 uv = gl_FragCoord.xy/uResolution.xy;
 
   if (uTime < 0.1) {
-    vec3 pos = vec3(uv.x, uv.y, rand(uv)) * 0.5 + 0.1;
+    vec3 pos = vec3(uv.x, uv.y, rand(uv));
     gl_FragData[0] = vec4(pos, 1.0);
-    gl_FragData[1] = vec4(0.5, 0.5, 0.5, 1.0);
+    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
   }
   else {
     // read data
     vec3 pos = texture2D(uTexture0, uv).rgb;
-    vec3 vel = unpackUByte( texture2D(uTexture1, uv).rgb );
+    vec3 vel = texture2D(uTexture1, uv).rgb;
     vec3 testVal = texture2D(uTexture2, uv).rgb;
 
     // compute force
 
-    vec3 gravityCenter = vec3(0.5, 0.5, 0.5);
+    vec3 gravityCenter = vec3(cos(uTime), sin(uTime), 0.0) * 0.25;
     vec3 toCenter = gravityCenter - pos;
     float toCenterLength = length(toCenter);
     vec3 accel = (toCenter/toCenterLength) * K_GRAVITY / toCenterLength;
-    //accel = vec3(0.0, -K_GRAVITY, 0.0);
+    //accel = vec3(0.0, 0.0, 0.0);
 
 
     // update particle
@@ -81,12 +73,12 @@ void main() {
     pos += vel * uDeltaT;
     vel += accel * uDeltaT;
 
-    // wrap around
-    pos = fract(pos);
+    // // wrap around
+    // pos = fract(pos);
 
     // write out data
     gl_FragData[0] = vec4(pos, 1.0);
-    gl_FragData[1] = vec4(packUByte(vel), 1.0);
+    gl_FragData[1] = vec4(vel, 1.0);
   }
   //gl_FragData[2] = vec4(uv.x, uv.y, rand(uv), 1.0);
 }

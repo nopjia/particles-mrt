@@ -9,11 +9,9 @@ define([
 
   var gl = null;
   var ext = null;
+  var ext1 = null;
 
-  var modelMat = mat4.create();
-  mat4.identity(modelMat);
-
-  var PARTICLE_DIM = 256;
+  var PARTICLE_DIM = 512;
 
   var Graphics = {
     CAM_FOV: 45,
@@ -25,6 +23,7 @@ define([
     height: -1,
 
     timer: 0.0,
+    timeScale: 1.0,
 
     shaders: {
       particle: {
@@ -36,7 +35,6 @@ define([
           aUV: {},
         },
         uniforms: {
-          uModelMat: { value: null },
           uViewMat: { value: null },
           uProjectionMat: { value: null },
           uTexture0: { value: null },
@@ -49,12 +47,13 @@ define([
           aPosition: {}
         },
         uniforms: {
-          uResolution: { value: vec2.create() },
-          uTime: { value: 0.0 },
-          uDeltaT: { value: 0.0 },
-          uTexture0: { value: null },
-          uTexture1: { value: null },
-          uTexture2: { value: null },
+          uResolution: { value: [0.0, 0.0] },
+          uTime:       { value: 0.0 },
+          uDeltaT:     { value: 0.0 },
+          uMouse:      { value: [0.0, 0.0] },
+          uTexture0:   { value: null },
+          uTexture1:   { value: null },
+          uTexture2:   { value: null },
         }
       }
     },
@@ -151,11 +150,11 @@ define([
     },
 
     update: function(deltaT) {
-      this.timer += deltaT;
+      this.timer += deltaT * this.timeScale;
 
       this.stats.update();
 
-      this.logicUpdate(deltaT);
+      this.logicUpdate(deltaT * this.timeScale);
       this.draw();
     },
 
@@ -175,6 +174,9 @@ define([
         console.error("Your browser does not support WebGL.");
         return false;
       }
+
+      gl.getExtension('OES_texture_float');
+      gl.getExtension('OES_texture_float_linear');
 
       try {
         ext = gl.getExtension('WEBGL_draw_buffers');
@@ -292,13 +294,11 @@ define([
       for (var i=0; i<buf.textures.length; ++i) {
         buf.textures[i] = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, buf.textures[i]);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  // NOTE: linear to make smoother (weird...)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);  // NOTE: linear to make smoother? (weird...)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
-          buf.width, buf.height,
-          0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, buf.width, buf.height, 0, gl.RGBA, gl.FLOAT, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
       }
 
@@ -364,7 +364,8 @@ define([
 
       // camera
       mat4.identity(this.viewMat);
-      mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -1.5]);
+      mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -5.0]);
+      mat4.rotateY(this.viewMat, this.viewMat, this.timer * 0.5);
 
       // update uniforms for view/project matrix
       for (var shaderName in this.shaders) {
@@ -382,21 +383,14 @@ define([
         gl.useProgram(null);
       }
 
-      // test animate model matrix
-      mat4.identity(modelMat);
-      mat4.rotateY(modelMat, modelMat, this.timer * 0.5);
-      mat4.translate(modelMat, modelMat, [-0.5, -0.5, -0.5]);
-      this.shaders.particle.uniforms.uModelMat.value = modelMat;
-      gl.useProgram(this.shaders.particle.program);
-      gl.uniformMatrix4fv(this.shaders.particle.uniforms.uModelMat.location, false, this.shaders.particle.uniforms.uModelMat.value);
-      gl.useProgram(null);
-
       // update particleCompute shader uniforms
       this.shaders.particleCompute.uniforms.uTime.value = this.timer;
       this.shaders.particleCompute.uniforms.uDeltaT.value = deltaT;
+      this.shaders.particleCompute.uniforms.uMouse.value = [0.0, 0.0];  // TODO
       gl.useProgram(this.shaders.particleCompute.program);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uTime.location, this.shaders.particleCompute.uniforms.uTime.value);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uDeltaT.location, this.shaders.particleCompute.uniforms.uDeltaT.value);
+      gl.uniform3f(this.shaders.particleCompute.uniforms.uMouse.location, this.shaders.particleCompute.uniforms.uMouse.value[0], this.shaders.particleCompute.uniforms.uMouse.value[1], this.shaders.particleCompute.uniforms.uMouse.value[2]);
       gl.useProgram(null);
     },
 

@@ -15,10 +15,10 @@ uniform mat4 uProjectionMat;
 uniform sampler2D uTexture0;
 
 void main() {
-  vColor = vec4(1.0, 1.0, 0.0, 0.1);//aColor;
+  vColor = vec4(1.0, 0.5, 0.15, 0.5);//aColor;
   vUV = aUV;
 
-  gl_PointSize = 3.0;
+  gl_PointSize = 2.0;
 
   vec3 pos = texture2D(uTexture0, aUV).rgb;
 

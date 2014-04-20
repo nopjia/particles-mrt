@@ -13,6 +13,8 @@ define([
   var modelMat = mat4.create();
   mat4.identity(modelMat);
 
+  var PARTICLE_DIM = 256;
+
   var Graphics = {
     CAM_FOV: 45,
     CAM_NEAR: 1,
@@ -105,13 +107,13 @@ define([
     // have two duplicate buffers
     particleComputeBuffers: [
       {
-        width: 256,
-        height: 256,
+        width: PARTICLE_DIM,
+        height: PARTICLE_DIM,
         textures: new Array(3)
       },
       {
-        width: 256,
-        height: 256,
+        width: PARTICLE_DIM,
+        height: PARTICLE_DIM,
         textures: new Array(3)
       }
     ],
@@ -290,8 +292,8 @@ define([
       for (var i=0; i<buf.textures.length; ++i) {
         buf.textures[i] = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, buf.textures[i]);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);  // NOTE: linear to make smoother (weird...)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA,
@@ -362,7 +364,7 @@ define([
 
       // camera
       mat4.identity(this.viewMat);
-      mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -5.0]);
+      mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -1.5]);
 
       // update uniforms for view/project matrix
       for (var shaderName in this.shaders) {
@@ -381,7 +383,9 @@ define([
       }
 
       // test animate model matrix
-      mat4.rotateY(modelMat, modelMat, 0.01);
+      mat4.identity(modelMat);
+      mat4.rotateY(modelMat, modelMat, this.timer * 0.5);
+      mat4.translate(modelMat, modelMat, [-0.5, -0.5, -0.5]);
       this.shaders.particle.uniforms.uModelMat.value = modelMat;
       gl.useProgram(this.shaders.particle.program);
       gl.uniformMatrix4fv(this.shaders.particle.uniforms.uModelMat.location, false, this.shaders.particle.uniforms.uModelMat.value);

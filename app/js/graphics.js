@@ -1,10 +1,10 @@
 define([
   "utils",
-  "Stats",
   "glMatrix"
   ],
   function(
-    Utils
+    Utils,
+    glm
   ) {
 
   var gl = null;
@@ -100,8 +100,8 @@ define([
       }
     },
 
-    projectionMat: mat4.create(),
-    viewMat: mat4.create(),
+    projectionMat: glm.mat4.create(),
+    viewMat: glm.mat4.create(),
 
     // have two duplicate buffers
     particleComputeBuffers: [
@@ -120,15 +120,6 @@ define([
     init: function(canvas) {
       this.canvas = canvas;
       this.onWindowResize();
-
-      // init stats
-      this.stats = new Stats();
-      this.stats.domElement.style.position = 'absolute';
-      this.stats.domElement.style.top = '0px';
-      this.stats.domElement.style.zIndex = 100;
-      document.body.appendChild( this.stats.domElement );
-
-      this.clock = new Clock();
 
       (function(self) {
         window.addEventListener(
@@ -151,8 +142,6 @@ define([
 
     update: function(deltaT) {
       this.timer += deltaT * this.timeScale;
-
-      this.stats.update();
 
       this.logicUpdate(deltaT * this.timeScale);
       this.draw();
@@ -361,12 +350,12 @@ define([
       // TODO: auto update shader uniforms from value, through function
 
       // perspective
-      mat4.perspective(this.projectionMat, 45, this.width / this.height, 0.1, 100.0);
+      glm.mat4.perspective(this.projectionMat, 45, this.width / this.height, 0.1, 100.0);
 
       // camera
-      mat4.identity(this.viewMat);
-      mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -5.0]);
-      mat4.rotateY(this.viewMat, this.viewMat, this.timer * 0.5);
+      glm.mat4.identity(this.viewMat);
+      glm.mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -5.0]);
+      glm.mat4.rotateY(this.viewMat, this.viewMat, this.timer * 0.5);
 
       // update uniforms for view/project matrix
       for (var shaderName in this.shaders) {

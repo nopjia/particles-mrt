@@ -1,8 +1,8 @@
 /**
- * @author alteredq / http://alteredqualia.com/
- */
+* @author alteredq / http://alteredqualia.com/
+*/
 
-Clock = function ( autoStart ) {
+var Clock = function ( autoStart ) {
 
   this.autoStart = ( autoStart !== undefined ) ? autoStart : true;
 

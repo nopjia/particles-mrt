@@ -1,37 +1,51 @@
 define([
   "jquery",
+  "requestAnimationFrame",
   "shortcut",
   "graphics",
-  "requestAnimationFrame",
-  "clock"
+  "clock",
+  "Stats"
   ],
   function(
     ignore,
+    ignore,
     shortcut,
-    g
+    Graphics,
+    ignore,
+    Stats
   ) {
 
   var setupShortcuts = function() {
     shortcut.add("space", function() {
-      g.timeScale = g.timeScale > 0.0 ? g.timeScale = 0.0 : g.timeScale = 1.0;
+      Graphics.timeScale = Graphics.timeScale > 0.0 ?
+        Graphics.timeScale = 0.0 : Graphics.timeScale = 1.0;
     });
   };
 
   var App = {
 
+    stats: null,
     clock: null,
 
     init: function() {
-      g.init($("#webgl-canvas")[0]);
-      clock = new Clock();
+      Graphics.init($("#webgl-canvas")[0]);
+      this.clock = new Clock();
       setupShortcuts();
+
+      // init stats
+      this.stats = new Stats();
+      this.stats.domElement.style.position = 'absolute';
+      this.stats.domElement.style.top = '0px';
+      this.stats.domElement.style.zIndex = 100;
+      document.body.appendChild( this.stats.domElement );
 
       this.update();
     },
 
     update: function() {
       requestAnimationFrame(App.update);
-      g.update(clock.getDelta());
+      Graphics.update(App.clock.getDelta());
+      App.stats.update();
     }
 
   };

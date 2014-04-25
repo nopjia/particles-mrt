@@ -21,6 +21,7 @@ define([
     height: -1,
 
     camera: null,
+    cameraControls: null,
 
     timer: 0.0,
     timeScale: 1.0,
@@ -121,8 +122,7 @@ define([
       this.canvas.height = this.height;
 
       this.camera = new Camera.Camera(45.0, 0.1, 1000, this.width/this.height);
-      this.camera.update();
-      console.log(this.camera);
+      this.cameraControls = new Camera.Controls(this.camera);
 
       (function(self) {
         window.addEventListener(
@@ -354,6 +354,7 @@ define([
       // TODO: auto update shader uniforms from value, through function
 
       // camera
+      this.cameraControls.update();
       this.camera.update();
 
       // update uniforms for view projection matrix

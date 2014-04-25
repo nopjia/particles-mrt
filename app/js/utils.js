@@ -16,6 +16,14 @@ define([], function() {
       });
       
       return result;
+    },
+
+    radians: function(degrees) {
+      return degrees * Math.PI / 180.0;
+    },
+
+    degrees: function(rads) {
+      return rads * 180.0 / Math.PI;
     }
 
   };

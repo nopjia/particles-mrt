@@ -9,11 +9,14 @@ define([
     Camera
   ) {
 
+  var PARTICLE_DIM = 512;
+  var CAMERA_FOV = 45.0;
+  var CAMERA_NEAR = 0.1;
+  var CAMERA_FAR = 1000.0;
+
   var gl = null;
   var ext = null;
   var ext1 = null;
-
-  var PARTICLE_DIM = 64;
 
   var Graphics = {
     canvas: null,
@@ -121,8 +124,9 @@ define([
       this.canvas.width = this.width;
       this.canvas.height = this.height;
 
-      this.camera = new Camera.Camera(45.0, 0.1, 1000, this.width/this.height);
+      this.camera = new Camera.Camera(CAMERA_FOV, CAMERA_NEAR, CAMERA_FAR, this.width/this.height);
       this.cameraControls = new Camera.Controls(this.camera);
+      this.cameraControls.radius = 5.0;
 
       (function(self) {
         window.addEventListener(

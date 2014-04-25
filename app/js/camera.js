@@ -6,7 +6,7 @@ define(["glMatrix", "Utils"], function(glm, Utils) {
     this.far = far;
     this.aspect = aspect;
 
-    this.pos    = [0.0, 0.0, 10.0];
+    this.pos    = [0.0, 0.0, 1.0];
     this.target = [0.0, 0.0, 0.0];
     this.up     = [0.0, 1.0, 0.0];
 
@@ -24,10 +24,21 @@ define(["glMatrix", "Utils"], function(glm, Utils) {
   var Controls = function(camera) {
     this.yawAngle = 0.0;
     this.pitchAngle = 0.0;
-    this.radius = 10.0;
+    this.radius = 1.0;
 
     this.camera = camera;
-    this.camera.pos    = [0.0, 0.0, 10.0];
+    this.camera.pos    = [0.0, 0.0, this.radius];
+    this.camera.target = [0.0, 0.0, 0.0];
+    this.camera.up     = [0.0, 1.0, 0.0];
+    this.camera.right  = [1.0, 0.0, 0.0];
+  };
+
+  Controls.prototype.reset = function() {
+    this.yawAngle = 0.0;
+    this.pitchAngle = 0.0;
+    this.radius = 1.0;
+    
+    this.camera.pos    = [0.0, 0.0, this.radius];
     this.camera.target = [0.0, 0.0, 0.0];
     this.camera.up     = [0.0, 1.0, 0.0];
     this.camera.right  = [1.0, 0.0, 0.0];

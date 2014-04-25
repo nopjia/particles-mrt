@@ -16,10 +16,19 @@ define([
   ) {
 
   var setupKeyboard = function() {
+
+    // pause simulation time
     Mousetrap.bind("space", function() {
       Graphics.timeScale = Graphics.timeScale > 0.0 ?
         Graphics.timeScale = 0.0 : Graphics.timeScale = 1.0;
     });
+
+    // reset camera
+    Mousetrap.bind("shift+r", function() {
+      Graphics.cameraControls.reset();
+      Graphics.cameraControls.radius = 5.0;
+    });
+    
   };
 
   var App = {
@@ -62,7 +71,7 @@ define([
     initMouse: function() {
       // disable context menu
       document.oncontextmenu = function() { return false; };
-      
+
       (function(self) {
         $(document).mousemove(function(event) {
           self.mouse.dx = event.pageX - self.mouse.x;

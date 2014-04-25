@@ -1,22 +1,22 @@
 define([
   "jquery",
   "requestAnimationFrame",
-  "shortcut",
-  "graphics",
+  "Stats",
+  "mousetrap",
   "clock",
-  "Stats"
+  "graphics"
   ],
   function(
     ignore,
     ignore,
-    shortcut,
-    Graphics,
     ignore,
-    Stats
+    ignore,
+    ignore,
+    Graphics
   ) {
 
-  var setupShortcuts = function() {
-    shortcut.add("space", function() {
+  var setupKeyboard = function() {
+    Mousetrap.bind("space", function() {
       Graphics.timeScale = Graphics.timeScale > 0.0 ?
         Graphics.timeScale = 0.0 : Graphics.timeScale = 1.0;
     });
@@ -30,7 +30,7 @@ define([
     init: function() {
       Graphics.init($("#webgl-canvas")[0]);
       this.clock = new Clock();
-      setupShortcuts();
+      setupKeyboard();
 
       // init stats
       this.stats = new Stats();

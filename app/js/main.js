@@ -8,6 +8,7 @@ require.config({
     jquery: "vendor/jquery",
     Stats: "vendor/Stats",
     shortcut: "vendor/shortcut",
+    mousetrap: "vendor/mousetrap",
     glMatrix: "vendor/gl-matrix"  // TODO: fix this
   }
 });

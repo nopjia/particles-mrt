@@ -1,26 +1,26 @@
 define([
   "utils",
-  "glMatrix"
+  "glMatrix",
+  "camera"
   ],
   function(
     Utils,
-    glm
+    glm,
+    Camera
   ) {
 
   var gl = null;
   var ext = null;
   var ext1 = null;
 
-  var PARTICLE_DIM = 512;
+  var PARTICLE_DIM = 64;
 
   var Graphics = {
-    CAM_FOV: 45,
-    CAM_NEAR: 1,
-    CAM_FAR: 1000,
-
     canvas: null,
     width: -1,
     height: -1,
+
+    camera: null,
 
     timer: 0.0,
     timeScale: 1.0,
@@ -35,8 +35,7 @@ define([
           aUV: {},
         },
         uniforms: {
-          uViewMat: { value: null },
-          uProjectionMat: { value: null },
+          uViewProjMat: { value: null },
           uTexture0: { value: null },
         }
       },
@@ -100,9 +99,6 @@ define([
       }
     },
 
-    projectionMat: glm.mat4.create(),
-    viewMat: glm.mat4.create(),
-
     // have two duplicate buffers
     particleComputeBuffers: [
       {
@@ -119,7 +115,14 @@ define([
 
     init: function(canvas) {
       this.canvas = canvas;
-      this.onWindowResize();
+      this.width = this.canvas.offsetWidth;
+      this.height = this.canvas.offsetHeight;
+      this.canvas.width = this.width;
+      this.canvas.height = this.height;
+
+      this.camera = new Camera.Camera(45.0, 0.1, 1000, this.width/this.height);
+      this.camera.update();
+      console.log(this.camera);
 
       (function(self) {
         window.addEventListener(
@@ -152,6 +155,7 @@ define([
       this.height = this.canvas.offsetHeight;
       this.canvas.width = this.width;
       this.canvas.height = this.height;
+      this.camera.aspect = this.width/this.height;
     },
 
     initGL: function() {
@@ -349,27 +353,20 @@ define([
     logicUpdate: function(deltaT) {
       // TODO: auto update shader uniforms from value, through function
 
-      // perspective
-      glm.mat4.perspective(this.projectionMat, 45, this.width / this.height, 0.1, 100.0);
-
       // camera
-      glm.mat4.identity(this.viewMat);
-      glm.mat4.translate(this.viewMat, this.viewMat, [0.0, 0.0, -5.0]);
-      glm.mat4.rotateY(this.viewMat, this.viewMat, this.timer * 0.5);
+      this.camera.update();
 
-      // update uniforms for view/project matrix
+      // update uniforms for view projection matrix
       for (var shaderName in this.shaders) {
         var shader = this.shaders[shaderName];
 
-        if (!shader.uniforms.uProjectionMat || !shader.uniforms.uViewMat)
+        if (!shader.uniforms.uViewProjMat)
           continue;
 
-        shader.uniforms.uProjectionMat.value = this.projectionMat;
-        shader.uniforms.uViewMat.value = this.viewMat;
+        shader.uniforms.uViewProjMat.value = this.camera.viewProjMat;
 
         gl.useProgram(shader.program);
-        gl.uniformMatrix4fv(shader.uniforms.uProjectionMat.location, false, shader.uniforms.uProjectionMat.value);
-        gl.uniformMatrix4fv(shader.uniforms.uViewMat.location, false, shader.uniforms.uViewMat.value);
+        gl.uniformMatrix4fv(shader.uniforms.uViewProjMat.location, false, shader.uniforms.uViewProjMat.value);
         gl.useProgram(null);
       }
 

@@ -9,8 +9,7 @@ attribute vec2 aUV;
 varying vec4 vColor;
 varying vec2 vUV;
 
-uniform mat4 uViewMat;
-uniform mat4 uProjectionMat;
+uniform mat4 uViewProjMat;
 uniform sampler2D uTexture0;
 
 void main() {
@@ -21,5 +20,5 @@ void main() {
 
   vec3 pos = texture2D(uTexture0, aUV).rgb;
 
-  gl_Position = uProjectionMat * uViewMat * vec4(pos, 1.0);
+  gl_Position = uViewProjMat * vec4(pos, 1.0);
 }

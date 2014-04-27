@@ -17,22 +17,6 @@ define([
     glm
   ) {
 
-  var setupKeyboard = function() {
-
-    // pause simulation time
-    Mousetrap.bind("space", function() {
-      Graphics.timeScale = Graphics.timeScale > 0.0 ?
-        Graphics.timeScale = 0.0 : Graphics.timeScale = 1.0;
-    });
-
-    // reset camera
-    Mousetrap.bind("shift+r", function() {
-      Graphics.cameraControls.reset();
-      Graphics.cameraControls.radius = 5.0;
-    });
-    
-  };
-
   var App = {
 
     stats: null,
@@ -46,10 +30,12 @@ define([
       buttons: new Array(4)
     },
 
+    ctrlMode: false,
+
     init: function() {
       Graphics.init($("#webgl-canvas")[0]);
       this.clock = new Clock();
-      setupKeyboard();
+      this.setupKeyboard();
 
       // init stats
       this.stats = new Stats();
@@ -68,6 +54,30 @@ define([
       App.mouseUpdate();
       Graphics.update(App.clock.getDelta());
       App.stats.update();
+    },
+
+    setupKeyboard: function() {
+
+      // pause simulation time
+      Mousetrap.bind("space", function() {
+        Graphics.timeScale = Graphics.timeScale > 0.0 ?
+          Graphics.timeScale = 0.0 : Graphics.timeScale = 1.0;
+      });
+
+      // reset camera
+      Mousetrap.bind("shift+r", function() {
+        Graphics.cameraControls.reset();
+        Graphics.cameraControls.radius = 5.0;
+      });
+
+      // control mode
+      (function(self) {
+        Mousetrap.bind("shift+c", function() {
+          self.ctrlMode = !self.ctrlMode;
+          console.log("Control Mode: "+self.ctrlMode);
+        });
+      })(this);
+
     },
 
     initMouse: function() {
@@ -89,9 +99,18 @@ define([
     },
 
     mouseUpdate: function() {
-
-      // camera controls
-      if (false) {
+      // test moving gravity
+      if (this.ctrlMode) {
+        if (this.mouse.buttons[1]) {
+          var u = this.mouse.x / Graphics.width;
+          var v = 1.0 - (this.mouse.y / Graphics.height);
+          var point = Graphics.camera.getPointOnTargetPlane(u,v);
+          console.log(point);
+          Graphics.shaders.particleCompute.uniforms.uInputPos.value = point;
+        }
+      }
+      else {
+        // camera controls
         if (this.mouse.buttons[1]) {
           var K_ROTATE = -0.01;
           Graphics.cameraControls.rotate(K_ROTATE*this.mouse.dx, K_ROTATE*this.mouse.dy);
@@ -106,18 +125,8 @@ define([
         }
       }
 
-      // test moving gravity
-      if (this.mouse.buttons[1]) {
-        var u = this.mouse.x / Graphics.width;
-        var v = 1.0 - (this.mouse.y / Graphics.height);
-        var point = Graphics.camera.getRay(u,v);
-        glm.vec3.scale(point, point, 5.0);
-        glm.vec3.add(point, point, Graphics.camera.pos);
-        Graphics.shaders.particleCompute.uniforms.uInputPos.value = point;
-
-        this.mouse.dx = 0.0;
-        this.mouse.dy = 0.0;
-      }
+      this.mouse.dx = 0.0;
+      this.mouse.dy = 0.0;
     }
 
   };

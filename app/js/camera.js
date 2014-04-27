@@ -23,6 +23,16 @@ define(["glMatrix", "Utils"], function(glm, Utils) {
   };
 
   Camera.prototype.getRay = function(u, v) {
+
+    // unproject method (TODO: faster?)
+
+    // var ray = [2.0*u-1.0, 2.0*v-1.0, 1.0];
+    // var invViewProj = glm.mat4.clone(this.viewProjMat);
+    // glm.mat4.invert(invViewProj, invViewProj);
+    // glm.vec3.transformMat4(ray, ray, invViewProj);
+    // glm.vec3.normalize(ray, ray);
+    // return ray;
+
     var A = glm.vec3.clone(this.right); // +x
     var B = glm.vec3.clone(this.up);    // +y
     var C = glm.vec3.create();          // +z
@@ -47,6 +57,22 @@ define(["glMatrix", "Utils"], function(glm, Utils) {
     glm.vec3.normalize(C, C);
 
     return C;
+  };
+
+  Camera.prototype.getPointOnTargetPlane = function(u, v) {
+    var ray = this.getRay(u,v);
+    var targetVec = glm.vec3.create();
+    glm.vec3.sub(targetVec, this.target, this.pos);
+    var targetDist = glm.vec3.length(targetVec);
+
+    var angle = Math.acos(glm.vec3.dot(ray, targetVec)/targetDist);
+
+    var scale = targetDist / Math.cos(angle);
+    glm.vec3.scale(ray, ray, scale);
+
+    glm.vec3.add(ray, ray, this.pos);
+
+    return ray;
   };
 
   var Controls = function(camera) {

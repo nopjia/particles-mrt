@@ -16,8 +16,8 @@ precision highp float;
 #define EQUALS(A,B) ( abs((A)-(B)) < EPS )
 #define EQUALSZERO(A) ( ((A)<EPS) && ((A)>-EPS) )
 
-#define K_GRAVITY   1.0
-#define K_VEL_DECAY 0.999
+#define K_GRAVITY   10.0
+#define K_VEL_DECAY 0.99
 
 //---------------------------------------------------------
 // UNIFORMS
@@ -49,9 +49,10 @@ void main() {
   vec2 uv = gl_FragCoord.xy/uResolution.xy;
 
   if (uTime < 0.1) {
+    // initial conditions
     vec3 pos = vec3(uv.x, uv.y, rand(uv));
     gl_FragData[0] = vec4(pos, 1.0);
-    gl_FragData[1] = vec4(0.0, 0.0, 0.0, 1.0);
+    gl_FragData[1] = vec4(-2.0, 0.0, 0.0, 1.0);
   }
   else {
     // read data
@@ -60,25 +61,20 @@ void main() {
     vec3 testVal = texture2D(uTexture2, uv).rgb;
 
     // compute force
-
     //vec3 gravityCenter = vec3(cos(uTime), sin(uTime), 0.0) * 0.25;
     vec3 toCenter = uInputPos - pos;
     float toCenterLength = length(toCenter);
     vec3 accel = (toCenter/toCenterLength) * K_GRAVITY / toCenterLength;
-    //accel = vec3(0.0, 0.0, 0.0);
-
 
     // update particle
     // important, order matters
     pos += vel * uDeltaT;
     vel = K_VEL_DECAY * vel + accel * uDeltaT;
 
-    // // wrap around
-    // pos = fract(pos);
-
     // write out data
     gl_FragData[0] = vec4(pos, 1.0);
     gl_FragData[1] = vec4(vel, 1.0);
   }
+
   //gl_FragData[2] = vec4(uv.x, uv.y, rand(uv), 1.0);
 }

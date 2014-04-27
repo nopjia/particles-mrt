@@ -72,10 +72,14 @@ define([
 
       // control mode
       (function(self) {
-        Mousetrap.bind("shift+c", function() {
-          self.ctrlMode = !self.ctrlMode;
-          console.log("Control Mode: "+self.ctrlMode);
-        });
+        Mousetrap.bind("shift", function() {
+          self.ctrlMode = true;
+          return false;
+        }, "keydown");
+        Mousetrap.bind("shift", function() {
+          self.ctrlMode = false;
+          return false;
+        }, "keyup");
       })(this);
 
     },
@@ -105,7 +109,6 @@ define([
           var u = this.mouse.x / Graphics.width;
           var v = 1.0 - (this.mouse.y / Graphics.height);
           var point = Graphics.camera.getPointOnTargetPlane(u,v);
-          console.log(point);
           Graphics.shaders.particleCompute.uniforms.uInputPos.value = point;
         }
       }

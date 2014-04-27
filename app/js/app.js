@@ -30,7 +30,7 @@ define([
       buttons: new Array(4)
     },
 
-    ctrlMode: false,
+    camCtrlMode: false,
 
     init: function() {
       Graphics.init($("#webgl-canvas")[0]);
@@ -72,12 +72,12 @@ define([
 
       // control mode
       (function(self) {
-        Mousetrap.bind("shift", function() {
-          self.ctrlMode = true;
+        Mousetrap.bind("alt", function() {
+          self.camCtrlMode = true;
           return false;
         }, "keydown");
-        Mousetrap.bind("shift", function() {
-          self.ctrlMode = false;
+        Mousetrap.bind("alt", function() {
+          self.camCtrlMode = false;
           return false;
         }, "keyup");
       })(this);
@@ -104,7 +104,7 @@ define([
 
     mouseUpdate: function() {
       // test moving gravity
-      if (this.ctrlMode) {
+      if (!this.camCtrlMode) {
         if (this.mouse.buttons[1]) {
           var u = this.mouse.x / Graphics.width;
           var v = 1.0 - (this.mouse.y / Graphics.height);

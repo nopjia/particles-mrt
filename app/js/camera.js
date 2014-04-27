@@ -1,4 +1,4 @@
-define(["glMatrix", "Utils"], function(glm, Utils) {
+define(["glMatrix", "utils"], function(glm, Utils) {
 
   var Camera = function(fov, near, far, aspect) {
     this.fov = fov;

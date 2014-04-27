@@ -9,8 +9,8 @@ define([
     Camera
   ) {
 
-  var PARTICLE_DIM = 512;
-  var CAMERA_FOV = 45.0;
+  var PARTICLE_DIM = 128;
+  var CAMERA_FOV = Utils.radians(45.0);
   var CAMERA_NEAR = 0.1;
   var CAMERA_FAR = 1000.0;
 
@@ -53,7 +53,7 @@ define([
           uResolution: { value: [0.0, 0.0] },
           uTime:       { value: 0.0 },
           uDeltaT:     { value: 0.0 },
-          uMouse:      { value: [0.0, 0.0] },
+          uInputPos:   { value: [0.0, 0.0, 0.0] },
           uTexture0:   { value: null },
           uTexture1:   { value: null },
           uTexture2:   { value: null },
@@ -378,11 +378,10 @@ define([
       // update particleCompute shader uniforms
       this.shaders.particleCompute.uniforms.uTime.value = this.timer;
       this.shaders.particleCompute.uniforms.uDeltaT.value = deltaT;
-      this.shaders.particleCompute.uniforms.uMouse.value = [0.0, 0.0];  // TODO
       gl.useProgram(this.shaders.particleCompute.program);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uTime.location, this.shaders.particleCompute.uniforms.uTime.value);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uDeltaT.location, this.shaders.particleCompute.uniforms.uDeltaT.value);
-      gl.uniform3f(this.shaders.particleCompute.uniforms.uMouse.location, this.shaders.particleCompute.uniforms.uMouse.value[0], this.shaders.particleCompute.uniforms.uMouse.value[1], this.shaders.particleCompute.uniforms.uMouse.value[2]);
+      gl.uniform3f(this.shaders.particleCompute.uniforms.uInputPos.location, this.shaders.particleCompute.uniforms.uInputPos.value[0], this.shaders.particleCompute.uniforms.uInputPos.value[1], this.shaders.particleCompute.uniforms.uInputPos.value[2]);
       gl.useProgram(null);
     },
 

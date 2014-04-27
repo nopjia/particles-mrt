@@ -4,7 +4,8 @@ define([
   "Stats",
   "mousetrap",
   "clock",
-  "graphics"
+  "graphics",
+  "glMatrix"
   ],
   function(
     ignore,
@@ -12,7 +13,8 @@ define([
     ignore,
     ignore,
     ignore,
-    Graphics
+    Graphics,
+    glm
   ) {
 
   var setupKeyboard = function() {
@@ -80,30 +82,42 @@ define([
           self.mouse.y = event.pageY;
         }).mousedown(function(event) {
           self.mouse.buttons[event.which] = true;
-          console.log(self.mouse.buttons);
         }).mouseup(function(event) {
           self.mouse.buttons[event.which] = false;
-          console.log(self.mouse.buttons);
         });
       })(this);
     },
 
     mouseUpdate: function() {
-      if (this.mouse.buttons[1]) {
-        var K_ROTATE = -0.01;
-        Graphics.cameraControls.rotate(K_ROTATE*this.mouse.dx, K_ROTATE*this.mouse.dy);
-      }
-      else if (this.mouse.buttons[2]) {
-        var K_PAN = 0.1;
-        Graphics.cameraControls.pan(-K_PAN*this.mouse.dx, K_PAN*this.mouse.dy);
-      }
-      else if (this.mouse.buttons[3]) {
-        var K_ZOOM = 0.1;
-        Graphics.cameraControls.zoom(K_ZOOM*this.mouse.dy);
+
+      // camera controls
+      if (false) {
+        if (this.mouse.buttons[1]) {
+          var K_ROTATE = -0.01;
+          Graphics.cameraControls.rotate(K_ROTATE*this.mouse.dx, K_ROTATE*this.mouse.dy);
+        }
+        else if (this.mouse.buttons[2]) {
+          var K_PAN = 0.1;
+          Graphics.cameraControls.pan(-K_PAN*this.mouse.dx, K_PAN*this.mouse.dy);
+        }
+        else if (this.mouse.buttons[3]) {
+          var K_ZOOM = 0.1;
+          Graphics.cameraControls.zoom(K_ZOOM*this.mouse.dy);
+        }
       }
 
-      this.mouse.dx = 0.0;
-      this.mouse.dy = 0.0;
+      // test moving gravity
+      if (this.mouse.buttons[1]) {
+        var u = this.mouse.x / Graphics.width;
+        var v = 1.0 - (this.mouse.y / Graphics.height);
+        var point = Graphics.camera.getRay(u,v);
+        glm.vec3.scale(point, point, 5.0);
+        glm.vec3.add(point, point, Graphics.camera.pos);
+        Graphics.shaders.particleCompute.uniforms.uInputPos.value = point;
+
+        this.mouse.dx = 0.0;
+        this.mouse.dy = 0.0;
+      }
     }
 
   };

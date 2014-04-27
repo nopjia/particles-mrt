@@ -16,8 +16,8 @@ precision highp float;
 #define EQUALS(A,B) ( abs((A)-(B)) < EPS )
 #define EQUALSZERO(A) ( ((A)<EPS) && ((A)>-EPS) )
 
-#define K_GRAVITY 0.5
-
+#define K_GRAVITY   1.0
+#define K_VEL_DECAY 0.999
 
 //---------------------------------------------------------
 // UNIFORMS
@@ -26,7 +26,7 @@ precision highp float;
 uniform vec2 uResolution;
 uniform float uTime;
 uniform float uDeltaT;
-uniform float uMouse;
+uniform vec3 uInputPos;
 uniform sampler2D uTexture0;  // pos
 uniform sampler2D uTexture1;  // vel
 uniform sampler2D uTexture2;  // unused
@@ -61,8 +61,8 @@ void main() {
 
     // compute force
 
-    vec3 gravityCenter = vec3(cos(uTime), sin(uTime), 0.0) * 0.25;
-    vec3 toCenter = gravityCenter - pos;
+    //vec3 gravityCenter = vec3(cos(uTime), sin(uTime), 0.0) * 0.25;
+    vec3 toCenter = uInputPos - pos;
     float toCenterLength = length(toCenter);
     vec3 accel = (toCenter/toCenterLength) * K_GRAVITY / toCenterLength;
     //accel = vec3(0.0, 0.0, 0.0);
@@ -71,7 +71,7 @@ void main() {
     // update particle
     // important, order matters
     pos += vel * uDeltaT;
-    vel += accel * uDeltaT;
+    vel = K_VEL_DECAY * vel + accel * uDeltaT;
 
     // // wrap around
     // pos = fract(pos);

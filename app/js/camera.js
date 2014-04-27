@@ -9,16 +9,44 @@ define(["glMatrix", "Utils"], function(glm, Utils) {
     this.pos    = [0.0, 0.0, 1.0];
     this.target = [0.0, 0.0, 0.0];
     this.up     = [0.0, 1.0, 0.0];
+    this.right  = [1.0, 0.0, 0.0];
 
-    this.viewMat = mat4.create();
-    this.projMat = mat4.create();
-    this.viewProjMat = mat4.create();
+    this.viewMat = glm.mat4.create();
+    this.projMat = glm.mat4.create();
+    this.viewProjMat = glm.mat4.create();
   };
 
   Camera.prototype.update = function() {
     glm.mat4.lookAt(this.viewMat, this.pos, this.target, this.up);
-    glm.mat4.perspective(this.projMat, this.fov, this.aspect, this.near, this.far);
+    glm.mat4.perspective(this.projMat, this.fov*2.0, this.aspect, this.near, this.far);
     glm.mat4.mul(this.viewProjMat, this.projMat, this.viewMat);
+  };
+
+  Camera.prototype.getRay = function(u, v) {
+    var A = glm.vec3.clone(this.right); // +x
+    var B = glm.vec3.clone(this.up);    // +y
+    var C = glm.vec3.create();          // +z
+
+    // scale A and B
+    var tanFOV = Math.tan(this.fov);
+    glm.vec3.scale(A, A, tanFOV * this.aspect);
+    glm.vec3.scale(B, B, tanFOV);
+
+    // find C camera ray
+    glm.vec3.sub(C, this.target, this.pos);
+    glm.vec3.normalize(C, C);
+
+    // point = camPos+C + (2.0f*uv.x-1.0f)*A + (2.0f*uv.y-1.0f)*B;
+    
+    glm.vec3.scale(A, A, 2.0*u-1.0);  // reusing A for scaled u point, (TODO: can combine FOV here)
+    glm.vec3.scale(B, B, 2.0*v-1.0);  // reusing B for scaled v point
+    C[0] += A[0] + B[0];              // reusing C for result ray point
+    C[1] += A[1] + B[1];
+    C[2] += A[2] + B[2];
+
+    glm.vec3.normalize(C, C);
+
+    return C;
   };
 
   var Controls = function(camera) {
@@ -27,7 +55,7 @@ define(["glMatrix", "Utils"], function(glm, Utils) {
     this.radius = 1.0;
 
     this.camera = camera;
-    this.camera.pos    = [0.0, 0.0, this.radius];
+    this.camera.pos    = [0.0, 0.0, this.radius];   // TODO: should set values not re-init
     this.camera.target = [0.0, 0.0, 0.0];
     this.camera.up     = [0.0, 1.0, 0.0];
     this.camera.right  = [1.0, 0.0, 0.0];

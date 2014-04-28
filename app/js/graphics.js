@@ -246,17 +246,10 @@ define([
       }
 
       gl.clearColor(0.0, 0.0, 0.0, 0.0);
-      //gl.enable(gl.POINT_SMOOTH);
-
-      var blend = true;
-      if (blend) {
-        gl.disable(gl.DEPTH_TEST);
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-      }
-      else {
-        gl.enable(gl.DEPTH_TEST);
-      }
+      gl.disable(gl.DEPTH_TEST);
+      gl.depthMask(false);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     },
 
     compileShader: function(shader) {
@@ -458,6 +451,7 @@ define([
       gl.viewport(0, 0, this.particleComputeBuffers[0].width, this.particleComputeBuffers[0].height);
       //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.blendFunc(gl.ONE, gl.ZERO);  // so alpha output color draws correctly
 
       // make sure no DEPTH_TEST
 

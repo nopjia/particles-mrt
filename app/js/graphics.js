@@ -50,13 +50,23 @@ define([
           aPosition: {}
         },
         uniforms: {
-          uResolution: { value: [0.0, 0.0] },
+          uResolution: { value: [PARTICLE_DIM, PARTICLE_DIM] },
           uTime:       { value: 0.0 },
           uDeltaT:     { value: 0.0 },
           uInputPos:   { value: [0.0, 0.0, 0.0] },
           uTexture0:   { value: null },
           uTexture1:   { value: null },
-          uTexture2:   { value: null },
+          uTexture2:   { value: null }
+        }
+      },
+      particleInit: {
+        vsFileName: "shaders/particleCompute.vs",
+        fsFileName: "shaders/particleInit.fs",
+        attributes: {
+          aPosition: {}
+        },
+        uniforms: {
+          uResolution: { value: [PARTICLE_DIM, PARTICLE_DIM] }
         }
       }
     },
@@ -139,12 +149,30 @@ define([
       this.initGL();
       this.initShaders();
       this.initBuffers();
-      this.testTexture = this.loadTexture("images/test-spectrum.png",
-        gl.LINEAR, gl.NEAREST,
-        gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
-        false);
+
+      // this.testTexture = this.loadTexture("images/test-spectrum.png",
+      //   gl.LINEAR, gl.NEAREST,
+      //   gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE,
+      //   false);
+
       this.initComputeBuffer(this.particleComputeBuffers[0]);
       this.initComputeBuffer(this.particleComputeBuffers[1]);
+
+      // set resolution uniform for compute shader programs
+      gl.useProgram(this.shaders.particleCompute.program);
+      gl.uniform2f(
+        this.shaders.particleCompute.uniforms.uResolution.location,
+        this.shaders.particleCompute.uniforms.uResolution.value[0],
+        this.shaders.particleCompute.uniforms.uResolution.value[1]);
+
+      gl.useProgram(this.shaders.particleInit.program);
+      gl.uniform2f(
+        this.shaders.particleInit.uniforms.uResolution.location,
+        this.shaders.particleInit.uniforms.uResolution.value[0],
+        this.shaders.particleInit.uniforms.uResolution.value[1]);
+      gl.useProgram(null);
+
+      this.drawParticleInit();
     },
 
     update: function(deltaT) {
@@ -231,6 +259,12 @@ define([
         console.error("Cannot link shaders");
         return false;
       }
+
+      // detach and delete shaders
+      gl.detachShader(shader.program, shader.vsShader);
+      gl.detachShader(shader.program, shader.fsShader);
+      gl.deleteShader(shader.vsShader);
+      gl.deleteShader(shader.fsShader);
 
       // get attribute and uniform locations
       for (var attributeName in shader.attributes) {
@@ -323,17 +357,6 @@ define([
 
       console.log("frame buffer initialized");
       console.log(buf);
-
-      // set resolution uniform
-      this.shaders.particleCompute.uniforms.uResolution.value[0] = buf.width;
-      this.shaders.particleCompute.uniforms.uResolution.value[1] = buf.height;
-
-      gl.useProgram(this.shaders.particleCompute.program);
-      gl.uniform2f(
-        this.shaders.particleCompute.uniforms.uResolution.location,
-        this.shaders.particleCompute.uniforms.uResolution.value[0],
-        this.shaders.particleCompute.uniforms.uResolution.value[1]);
-      gl.useProgram(null);
     },
 
     generateParticleVertexData: function() {
@@ -385,6 +408,36 @@ define([
       gl.useProgram(null);
     },
 
+    drawParticleInit: function() {
+      // draw init values to buffer0
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffers[0].frameBuffer);
+
+      gl.viewport(0, 0, this.particleComputeBuffers[0].width, this.particleComputeBuffers[0].height);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      // make sure no DEPTH_TEST
+
+      gl.useProgram(this.shaders.particleInit.program);
+
+      gl.enableVertexAttribArray(this.shaders.particleInit.attributes.aPosition.location);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.fullScreenQuadPos.buffer);
+      gl.vertexAttribPointer(
+        this.shaders.particleInit.attributes.aPosition.location,
+        this.vertexBuffers.fullScreenQuadPos.size, gl.FLOAT, false, 0, 0);
+
+      gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.fullScreenQuadPos.count);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      gl.disableVertexAttribArray(this.shaders.particleInit.attributes.aPosition.location);
+      gl.useProgram(null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+      // delete program, not used anymore
+      gl.deleteProgram(this.shaders.particleInit.program);
+    },
+
     drawComputeBuffer: function(fromBuf, toBuf) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, toBuf.frameBuffer);
 
@@ -422,6 +475,11 @@ define([
     },
 
     draw: function() {
+
+      // use buffer0 textures to draw to buffer1
+      // then use buffer1 to draw particles
+      // then swap buffer1 to buffer0
+
       this.drawComputeBuffer(this.particleComputeBuffers[0], this.particleComputeBuffers[1]);
 
       gl.viewport(0, 0, this.width, this.height);
@@ -431,20 +489,7 @@ define([
       gl.useProgram(this.shaders.particle.program);
 
       // enable vbos
-      // gl.enableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
-      // gl.enableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
       gl.enableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
-
-      // bind vbos
-      // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particlePos.buffer);
-      // gl.vertexAttribPointer(
-      //   this.shaders.particle.attributes.aPosition.location,
-      //   this.vertexBuffers.particlePos.size, gl.FLOAT, false, 0, 0);
-
-      // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particleCol.buffer);
-      // gl.vertexAttribPointer(
-      //   this.shaders.particle.attributes.aColor.location,
-      //   this.vertexBuffers.particleCol.size, gl.FLOAT, false, 0, 0);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffers.particleUV.buffer);
       gl.vertexAttribPointer(
@@ -460,13 +505,10 @@ define([
 
       // cleanup
 
-      // gl.bindTexture(gl.TEXTURE_2D, null);
-      // gl.activeTexture(gl.FALSE);
+      gl.bindTexture(gl.TEXTURE_2D, null);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
-      // gl.disableVertexAttribArray(this.shaders.particle.attributes.aPosition.location);
-      // gl.disableVertexAttribArray(this.shaders.particle.attributes.aColor.location);
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       gl.useProgram(null);

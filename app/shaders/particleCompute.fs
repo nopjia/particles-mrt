@@ -48,33 +48,25 @@ float rand(vec2 seed) {
 void main() {
   vec2 uv = gl_FragCoord.xy/uResolution.xy;
 
-  if (uTime < 0.1) {
-    // initial conditions
-    vec3 pos = vec3(uv.x, uv.y, rand(uv));
-    gl_FragData[0] = vec4(pos, 1.0);
-    gl_FragData[1] = vec4(-2.0, 0.0, 0.0, 1.0);
-  }
-  else {
-    // read data
-    vec3 pos = texture2D(uTexture0, uv).rgb;
-    vec3 vel = texture2D(uTexture1, uv).rgb;
-    vec3 testVal = texture2D(uTexture2, uv).rgb;
+  // read data
+  vec3 pos = texture2D(uTexture0, uv).rgb;
+  vec3 vel = texture2D(uTexture1, uv).rgb;
+  vec3 testVal = texture2D(uTexture2, uv).rgb;
 
-    // compute force
-    //vec3 gravityCenter = vec3(cos(uTime), sin(uTime), 0.0) * 0.25;
-    vec3 toCenter = uInputPos - pos;
-    float toCenterLength = length(toCenter);
-    vec3 accel = (toCenter/toCenterLength) * K_GRAVITY / toCenterLength;
+  // compute force
+  //vec3 gravityCenter = vec3(cos(uTime), sin(uTime), 0.0) * 0.25;
+  vec3 toCenter = uInputPos - pos;
+  float toCenterLength = length(toCenter);
+  vec3 accel = (toCenter/toCenterLength) * K_GRAVITY / toCenterLength;
 
-    // update particle
-    // important, order matters
-    pos += vel * uDeltaT;
-    vel = K_VEL_DECAY * vel + accel * uDeltaT;
+  // update particle
+  // important, order matters
+  pos += vel * uDeltaT;
+  vel = K_VEL_DECAY * vel + accel * uDeltaT;
 
-    // write out data
-    gl_FragData[0] = vec4(pos, 1.0);
-    gl_FragData[1] = vec4(vel, 1.0);
-  }
+  // write out data
+  gl_FragData[0] = vec4(pos, 1.0);
+  gl_FragData[1] = vec4(vel, 1.0);
 
   //gl_FragData[2] = vec4(uv.x, uv.y, rand(uv), 1.0);
 }

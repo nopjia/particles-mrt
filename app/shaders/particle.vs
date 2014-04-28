@@ -17,7 +17,5 @@ void main() {
   vColor = texture2D(uTexture2, aUV);
   //vColor = vec4(1.0, 0.3, 0.1, 0.5);
 
-  vec3 pos = texture2D(uTexture0, aUV).rgb;
-
-  gl_Position = uViewProjMat * vec4(pos, 1.0);
+  gl_Position = uViewProjMat * texture2D(uTexture0, aUV);
 }

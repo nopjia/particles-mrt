@@ -67,6 +67,5 @@ void main() {
   // write out data
   gl_FragData[0] = vec4(pos, 1.0);
   gl_FragData[1] = vec4(vel, 1.0);
-
-  //gl_FragData[2] = vec4(uv.x, uv.y, rand(uv), 1.0);
+  gl_FragData[2] = texture2D(uTexture2, uv);
 }

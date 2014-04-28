@@ -2,21 +2,19 @@
 precision highp float;
 #endif
 
-attribute vec3 aPosition;
-attribute vec4 aColor;
 attribute vec2 aUV;
 
 varying vec4 vColor;
-varying vec2 vUV;
 
 uniform mat4 uViewProjMat;
 uniform sampler2D uTexture0;
+uniform sampler2D uTexture1;
+uniform sampler2D uTexture2;
 
 void main() {
-  vColor = vec4(1.0, 0.5, 0.15, 0.5);//aColor;
-  vUV = aUV;
+  gl_PointSize = 1.0;
 
-  gl_PointSize = 2.0;
+  vColor = texture2D(uTexture2, aUV);
 
   vec3 pos = texture2D(uTexture0, aUV).rgb;
 

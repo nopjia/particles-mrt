@@ -9,7 +9,7 @@ define([
     Camera
   ) {
 
-  var PARTICLE_DIM = 128;
+  var PARTICLE_DIM = 512;
   var CAMERA_FOV = Utils.radians(45.0);
   var CAMERA_NEAR = 0.1;
   var CAMERA_FAR = 1000.0;
@@ -41,6 +41,8 @@ define([
         uniforms: {
           uViewProjMat: { value: null },
           uTexture0: { value: null },
+          uTexture1: { value: null },
+          uTexture2: { value: null }
         }
       },
       particleCompute: {
@@ -201,8 +203,14 @@ define([
       }
 
       // TODO: do this better
-      gl.getExtension('OES_texture_float');
-      gl.getExtension('OES_texture_float_linear');
+      try {
+        ext1 = gl.getExtension('OES_texture_float');
+      } catch(e) {
+      }
+      if (!ext1) {
+        console.error("OES_texture_float extension not supported");
+        return false;
+      }
 
       try {
         ext = gl.getExtension('WEBGL_draw_buffers');
@@ -443,6 +451,7 @@ define([
 
       gl.viewport(0, 0, toBuf.width, toBuf.height);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.blendFunc(gl.ONE, gl.ZERO);  // so alpha output color draws correctly
 
       // make sure no DEPTH_TEST
 
@@ -456,15 +465,15 @@ define([
         this.vertexBuffers.fullScreenQuadPos.size, gl.FLOAT, false, 0, 0);
 
       // bind textures
-      gl.activeTexture(gl.TEXTURE1);
+      gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, fromBuf.textures[0]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 1);
-      gl.activeTexture(gl.TEXTURE2);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture0.location, 0);
+      gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, fromBuf.textures[1]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 2);
-      gl.activeTexture(gl.TEXTURE3);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture1.location, 1);
+      gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, fromBuf.textures[2]);
-      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 3);
+      gl.uniform1i(this.shaders.particleCompute.uniforms.uTexture2.location, 2);
 
       gl.drawArrays(gl.TRIANGLES, 0, this.vertexBuffers.fullScreenQuadPos.count);
 
@@ -484,6 +493,7 @@ define([
 
       gl.viewport(0, 0, this.width, this.height);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);   // additive blending
       
       // use shader program
       gl.useProgram(this.shaders.particle.program);
@@ -500,6 +510,12 @@ define([
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[1].textures[0]);
       gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[1].textures[1]);
+      gl.uniform1i(this.shaders.particle.uniforms.uTexture1.location, 1);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[1].textures[2]);
+      gl.uniform1i(this.shaders.particle.uniforms.uTexture2.location, 2);
 
       gl.drawArrays(gl.POINTS, 0, this.vertexBuffers.particleUV.count);
 

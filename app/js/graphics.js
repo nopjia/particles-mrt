@@ -9,7 +9,7 @@ define([
     Camera
   ) {
 
-  var PARTICLE_DIM = 512;
+  var PARTICLE_DIM = 1024;
   var CAMERA_FOV = Utils.radians(45.0);
   var CAMERA_NEAR = 0.1;
   var CAMERA_FAR = 1000.0;
@@ -28,6 +28,10 @@ define([
 
     timer: 0.0,
     timeScale: 1.0,
+    fixedTimer: 0.0,
+    fixedTimeRemainder: 0.0,
+    FIXED_TIME_STEP: 0.02,
+    FIXED_TIME_STEP_MAX: 0.2,
 
     shaders: {
       particle: {
@@ -180,8 +184,28 @@ define([
     update: function(deltaT) {
       this.timer += deltaT * this.timeScale;
 
+      this.callFixedUpdate(deltaT);
+
       this.logicUpdate(deltaT * this.timeScale);
+      //this.simulate(deltaT * this.timeScale);
       this.draw();
+    },
+
+    callFixedUpdate: function(deltaT) {
+      this.fixedTimeRemainder += deltaT;
+
+      if (this.fixedTimeRemainder > this.FIXED_TIME_STEP_MAX)
+        this.fixedTimeRemainder = this.FIXED_TIME_STEP_MAX;
+
+      while (this.fixedTimeRemainder > this.FIXED_TIME_STEP) {
+        this.fixedUpdate();
+        this.fixedTimeRemainder -= this.FIXED_TIME_STEP;
+      }
+    },
+
+    fixedUpdate: function() {
+      this.fixedTimer += this.FIXED_TIME_STEP * this.timeScale;
+      this.simulate(this.FIXED_TIME_STEP * this.timeScale);
     },
 
     onWindowResize: function() {
@@ -405,15 +429,25 @@ define([
         gl.uniformMatrix4fv(shader.uniforms.uViewProjMat.location, false, shader.uniforms.uViewProjMat.value);
         gl.useProgram(null);
       }
+    },
 
+    simulate: function(deltaT) {
       // update particleCompute shader uniforms
-      this.shaders.particleCompute.uniforms.uTime.value = this.timer;
+      this.shaders.particleCompute.uniforms.uTime.value = this.fixedTimer;
       this.shaders.particleCompute.uniforms.uDeltaT.value = deltaT;
       gl.useProgram(this.shaders.particleCompute.program);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uTime.location, this.shaders.particleCompute.uniforms.uTime.value);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uDeltaT.location, this.shaders.particleCompute.uniforms.uDeltaT.value);
       gl.uniform3f(this.shaders.particleCompute.uniforms.uInputPos.location, this.shaders.particleCompute.uniforms.uInputPos.value[0], this.shaders.particleCompute.uniforms.uInputPos.value[1], this.shaders.particleCompute.uniforms.uInputPos.value[2]);
       gl.useProgram(null);
+
+      // draw the compute
+      this.drawComputeBuffer(this.particleComputeBuffers[0], this.particleComputeBuffers[1]);
+
+      // swap compute buffers
+      var tempBuf = this.particleComputeBuffers[0];
+      this.particleComputeBuffers[0] = this.particleComputeBuffers[1];
+      this.particleComputeBuffers[1] = tempBuf;
     },
 
     drawParticleInit: function() {
@@ -422,7 +456,8 @@ define([
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.particleComputeBuffers[0].frameBuffer);
 
       gl.viewport(0, 0, this.particleComputeBuffers[0].width, this.particleComputeBuffers[0].height);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.clear(gl.COLOR_BUFFER_BIT);
 
       // make sure no DEPTH_TEST
 
@@ -450,7 +485,8 @@ define([
       gl.bindFramebuffer(gl.FRAMEBUFFER, toBuf.frameBuffer);
 
       gl.viewport(0, 0, toBuf.width, toBuf.height);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.clear(gl.COLOR_BUFFER_BIT);
       gl.blendFunc(gl.ONE, gl.ZERO);  // so alpha output color draws correctly
 
       // make sure no DEPTH_TEST
@@ -489,10 +525,9 @@ define([
       // then use buffer1 to draw particles
       // then swap buffer1 to buffer0
 
-      this.drawComputeBuffer(this.particleComputeBuffers[0], this.particleComputeBuffers[1]);
-
       gl.viewport(0, 0, this.width, this.height);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.clear(gl.COLOR_BUFFER_BIT);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE);   // additive blending
       
       // use shader program
@@ -508,13 +543,13 @@ define([
 
       // bind texture
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[1].textures[0]);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[0].textures[0]);
       gl.uniform1i(this.shaders.particle.uniforms.uTexture0.location, 0);
       gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[1].textures[1]);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[0].textures[1]);
       gl.uniform1i(this.shaders.particle.uniforms.uTexture1.location, 1);
       gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[1].textures[2]);
+      gl.bindTexture(gl.TEXTURE_2D, this.particleComputeBuffers[0].textures[2]);
       gl.uniform1i(this.shaders.particle.uniforms.uTexture2.location, 2);
 
       gl.drawArrays(gl.POINTS, 0, this.vertexBuffers.particleUV.count);
@@ -528,11 +563,6 @@ define([
       gl.disableVertexAttribArray(this.shaders.particle.attributes.aUV.location);
 
       gl.useProgram(null);
-
-      // swap compute buffers
-      var tempBuf = this.particleComputeBuffers[0];
-      this.particleComputeBuffers[0] = this.particleComputeBuffers[1];
-      this.particleComputeBuffers[1] = tempBuf;
     }
   };
 

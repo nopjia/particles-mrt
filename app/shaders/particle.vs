@@ -15,6 +15,7 @@ void main() {
   gl_PointSize = 1.0;
 
   vColor = texture2D(uTexture2, aUV);
+  //vColor = vec4(1.0, 0.3, 0.1, 0.5);
 
   vec3 pos = texture2D(uTexture0, aUV).rgb;
 

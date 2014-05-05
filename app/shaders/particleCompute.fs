@@ -27,6 +27,7 @@ uniform vec2 uResolution;
 uniform float uTime;
 uniform float uDeltaT;
 uniform vec3 uInputPos;
+uniform float uKForce;
 uniform sampler2D uTexture0;  // pos
 uniform sampler2D uTexture1;  // vel
 uniform sampler2D uTexture2;  // unused
@@ -57,7 +58,7 @@ void main() {
   //vec3 gravityCenter = vec3(cos(uTime), sin(uTime), 0.0) * 0.25;
   vec3 toCenter = uInputPos - pos;
   float toCenterLength = length(toCenter);
-  vec3 accel = (toCenter/toCenterLength) * K_GRAVITY / toCenterLength;
+  vec3 accel = (toCenter/toCenterLength) * uKForce / toCenterLength;
 
   // update particle
   // important, order matters

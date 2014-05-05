@@ -18,16 +18,16 @@ void main() {
   vec3 vel = vec3(-2.0, 0.0, 0.0);
   vec4 col = vec4(1.0, 0.3, 0.1, 0.5);
 
-  if (uv.x < 0.5) {
-    pos = vec3(2.0*uv.x, uv.y+0.5, rand(uv));
-    vel = vec3(-2.0, 0.0, 0.0);
-    col = vec4(1.0, 0.3, 0.1, 0.5);
-  }
-  else {
-    pos = vec3(2.0*(uv.x-0.5)-1.0, uv.y+0.5, rand(uv));
-    vel = vec3(2.0, 0.0, 0.0);
-    col = vec4(0.1, 0.3, 1.0, 0.5);
-  }
+  // if (uv.x < 0.5) {
+  //   pos = vec3(2.0*uv.x, uv.y+0.5, rand(uv));
+  //   vel = vec3(-2.0, 0.0, 0.0);
+  //   col = vec4(1.0, 0.3, 0.1, 0.5);
+  // }
+  // else {
+  //   pos = vec3(2.0*(uv.x-0.5)-1.0, uv.y+0.5, rand(uv));
+  //   vel = vec3(2.0, 0.0, 0.0);
+  //   col = vec4(0.1, 0.3, 1.0, 0.5);
+  // }
 
   gl_FragData[0] = vec4(pos, 1.0);
   gl_FragData[1] = vec4(vel, 1.0);

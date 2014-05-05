@@ -5,7 +5,9 @@ define([
   "mousetrap",
   "clock",
   "graphics",
-  "glMatrix"
+  "utils",
+  "glMatrix",
+  "datGUI"
   ],
   function(
     ignore,
@@ -14,13 +16,17 @@ define([
     ignore,
     ignore,
     Graphics,
-    glm
+    Utils,
+    glm,
+    GUI   // TODO: fix this
   ) {
 
   var App = {
 
     stats: null,
     clock: null,
+    gui: null,
+    guiParams: null,
 
     mouse: {
       x: 0,
@@ -35,7 +41,8 @@ define([
     init: function() {
       Graphics.init($("#webgl-canvas")[0]);
       this.clock = new Clock();
-      this.setupKeyboard();
+      this.initGUI();
+      this.initKeyboard();
 
       // init stats
       this.stats = new Stats();
@@ -56,12 +63,53 @@ define([
       App.stats.update();
     },
 
-    setupKeyboard: function() {
+    initGUI: function() {
+      this.guiParams = {
+        Amount: 512,
+        Size: 1,
+        Color: [255, 76, 25],
+        Alpha: 0.5,
+        Gravity: 10.0,
+        Drag: 0.01,
+        "Reset !": function() { Graphics.drawParticleInit(); }
+      };
+
+      this.gui = new dat.GUI();
+
+      // this.gui.add(this.guiParams, "Amount", {
+      //   "16 K": 128,
+      //   "65 K": 256,
+      //   "260 K": 512,
+      //   "1 M": 1024,
+      //   "4 M": 2048
+      // });
+      // this.gui.add(this.guiParams, "Size", 0, 10);
+      this.gui.addColor(this.guiParams, "Color").onChange(function(value) {
+        console.log(value);
+
+        if (value[0] === "#") {
+          value = Utils.hexToRgb(value);
+        }
+
+        Graphics.shaders.particle.uniforms.uColor.value[0] = value[0] / 255.0;
+        Graphics.shaders.particle.uniforms.uColor.value[1] = value[1] / 255.0;
+        Graphics.shaders.particle.uniforms.uColor.value[2] = value[2] / 255.0;
+      });
+      this.gui.add(this.guiParams, "Alpha", 0, 1).onChange(function(value) {
+        Graphics.shaders.particle.uniforms.uColor.value[3] = value;
+      });
+      this.gui.add(this.guiParams, "Gravity", 0, 50).onFinishChange(function(value) {
+        Graphics.shaders.particleCompute.uniforms.uKForce.value = value;
+      });
+
+      this.gui.add(this.guiParams, "Reset !");
+    },
+
+    initKeyboard: function() {
 
       // pause simulation time
       Mousetrap.bind("space", function() {
-        Graphics.timeScale = Graphics.timeScale > 0.0 ?
-          Graphics.timeScale = 0.0 : Graphics.timeScale = 1.0;
+        Graphics.paused = !Graphics.paused;
       });
 
       // reset camera
@@ -88,8 +136,10 @@ define([
       // disable context menu
       document.oncontextmenu = function() { return false; };
 
+      var dom = $("#webgl-canvas")[0];
+
       (function(self) {
-        $(document).mousemove(function(event) {
+        $(dom).mousemove(function(event) {
           self.mouse.dx = event.pageX - self.mouse.x;
           self.mouse.dy = event.pageY - self.mouse.y;
           self.mouse.x = event.pageX;

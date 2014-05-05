@@ -9,7 +9,7 @@ define([
     Camera
   ) {
 
-  var PARTICLE_DIM = 1024;
+  var PARTICLE_DIM = 512;
   var CAMERA_FOV = Utils.radians(45.0);
   var CAMERA_NEAR = 0.1;
   var CAMERA_FAR = 1000.0;
@@ -32,6 +32,7 @@ define([
     fixedTimeRemainder: 0.0,
     FIXED_TIME_STEP: 0.02,
     FIXED_TIME_STEP_MAX: 0.2,
+    paused: false,
 
     shaders: {
       particle: {
@@ -44,9 +45,10 @@ define([
         },
         uniforms: {
           uViewProjMat: { value: null },
-          uTexture0: { value: null },
-          uTexture1: { value: null },
-          uTexture2: { value: null }
+          uColor:       { value: [1.0, 0.3, 0.1, 0.5] },
+          uTexture0:    { value: null },
+          uTexture1:    { value: null },
+          uTexture2:    { value: null }
         }
       },
       particleCompute: {
@@ -60,6 +62,7 @@ define([
           uTime:       { value: 0.0 },
           uDeltaT:     { value: 0.0 },
           uInputPos:   { value: [0.0, 0.0, 0.0] },
+          uKForce:     { value: 10.0 },
           uTexture0:   { value: null },
           uTexture1:   { value: null },
           uTexture2:   { value: null }
@@ -184,10 +187,10 @@ define([
     update: function(deltaT) {
       this.timer += deltaT * this.timeScale;
 
-      this.callFixedUpdate(deltaT);
+      if (!this.paused)
+        this.callFixedUpdate(deltaT);
 
       this.logicUpdate(deltaT * this.timeScale);
-      //this.simulate(deltaT * this.timeScale);
       this.draw();
     },
 
@@ -432,6 +435,7 @@ define([
       gl.uniform1f(this.shaders.particleCompute.uniforms.uTime.location, this.shaders.particleCompute.uniforms.uTime.value);
       gl.uniform1f(this.shaders.particleCompute.uniforms.uDeltaT.location, this.shaders.particleCompute.uniforms.uDeltaT.value);
       gl.uniform3f(this.shaders.particleCompute.uniforms.uInputPos.location, this.shaders.particleCompute.uniforms.uInputPos.value[0], this.shaders.particleCompute.uniforms.uInputPos.value[1], this.shaders.particleCompute.uniforms.uInputPos.value[2]);
+      gl.uniform1f(this.shaders.particleCompute.uniforms.uKForce.location, this.shaders.particleCompute.uniforms.uKForce.value);
       gl.useProgram(null);
 
       // draw the compute
@@ -472,7 +476,7 @@ define([
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
       // delete program, not used anymore
-      gl.deleteProgram(this.shaders.particleInit.program);
+      //gl.deleteProgram(this.shaders.particleInit.program);
     },
 
     drawComputeBuffer: function(fromBuf, toBuf) {
@@ -526,6 +530,9 @@ define([
       
       // use shader program
       gl.useProgram(this.shaders.particle.program);
+
+      // set uniform
+      gl.uniform4f(this.shaders.particle.uniforms.uColor.location, this.shaders.particle.uniforms.uColor.value[0], this.shaders.particle.uniforms.uColor.value[1], this.shaders.particle.uniforms.uColor.value[2], this.shaders.particle.uniforms.uColor.value[3]);
 
       // enable vbos
       gl.enableVertexAttribArray(this.shaders.particle.attributes.aUV.location);

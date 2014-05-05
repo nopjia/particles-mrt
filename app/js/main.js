@@ -1,14 +1,10 @@
 require.config({
-  shim: {
-    Stats: {
-      exports: "Stats"
-    }
-  },
   paths: {
     jquery: "vendor/jquery",
     Stats: "vendor/Stats",
     mousetrap: "vendor/mousetrap",
-    glMatrix: "vendor/gl-matrix"  // TODO: fix this
+    glMatrix: "vendor/gl-matrix",
+    datGUI: "vendor/dat.gui"  // TODO: fix this
   }
 });
 

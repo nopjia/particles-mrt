@@ -43,8 +43,6 @@ define([
       this.canvas = $("#webgl-canvas")[0];
       Graphics.init(this.canvas);
       this.clock = new Clock();
-      this.initGUI();
-      this.initKeyboard();
 
       // init stats
       this.stats = new Stats();
@@ -53,7 +51,9 @@ define([
       this.stats.domElement.style.zIndex = 100;
       document.body.appendChild( this.stats.domElement );
 
+      this.initKeyboard();
       this.initMouse();
+      this.initGUI();
 
       this.update();
     },
@@ -63,60 +63,6 @@ define([
       App.mouseUpdate();
       Graphics.update(App.clock.getDelta());
       App.stats.update();
-    },
-
-    initGUI: function() {
-      this.guiParams = {
-        Amount: 512,
-        Size: 1,
-        Color: [255, 76, 25],
-        Alpha: 0.5,
-        Gravity: 10.0,
-        Drag: 0.01,
-        Screenshot: function() {
-          Graphics.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-          Graphics.draw();
-          Utils.screenshotToNewWindow($("#webgl-canvas")[0]);
-          Graphics.gl.clearColor(0.0, 0.0, 0.0, 0.0);
-        },
-        Pause: function() {
-          Graphics.paused = !Graphics.paused;
-        },
-        Reset: function() {
-          Graphics.drawParticleInit();
-        }
-      };
-
-      this.gui = new dat.GUI();
-
-      // this.gui.add(this.guiParams, "Amount", {
-      //   "16 K": 128,
-      //   "65 K": 256,
-      //   "260 K": 512,
-      //   "1 M": 1024,
-      //   "4 M": 2048
-      // });
-      // this.gui.add(this.guiParams, "Size", 0, 10);
-      this.gui.addColor(this.guiParams, "Color").onChange(function(value) {
-        console.log(value);
-
-        if (value[0] === "#") {
-          value = Utils.hexToRgb(value);
-        }
-
-        Graphics.shaders.particle.uniforms.uColor.value[0] = value[0] / 255.0;
-        Graphics.shaders.particle.uniforms.uColor.value[1] = value[1] / 255.0;
-        Graphics.shaders.particle.uniforms.uColor.value[2] = value[2] / 255.0;
-      });
-      this.gui.add(this.guiParams, "Alpha", 0, 1).onChange(function(value) {
-        Graphics.shaders.particle.uniforms.uColor.value[3] = value;
-      });
-      this.gui.add(this.guiParams, "Gravity", 0, 50).onFinishChange(function(value) {
-        Graphics.shaders.particleCompute.uniforms.uKForce.value = value;
-      });
-      this.gui.add(this.guiParams, "Screenshot");
-      this.gui.add(this.guiParams, "Pause");
-      this.gui.add(this.guiParams, "Reset");
     },
 
     initKeyboard: function() {
@@ -144,6 +90,52 @@ define([
         }, "keyup");
       })(this);
 
+    },
+
+    initGUI: function() {
+      this.guiParams = {
+        amount: 512,
+        size: 1,
+        color: [255, 76, 25],
+        alpha: 0.5,
+        gravity: 10.0,
+        drag: 0.01,
+        screenshot: function() {
+          Graphics.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+          Graphics.draw();
+          Utils.screenshotToNewWindow($("#webgl-canvas")[0]);
+          Graphics.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+        },
+        reset: function() {
+          Graphics.drawParticleInit();
+        }
+      };
+
+      this.gui = new dat.GUI();
+
+      // this.gui.add(this.guiParams, "Amount", {
+      //   "16 K": 128,
+      //   "65 K": 256,
+      //   "260 K": 512,
+      //   "1 M": 1024,
+      //   "4 M": 2048
+      // });
+      // this.gui.add(this.guiParams, "Size", 0, 10);
+      this.gui.addColor(this.guiParams, "color").onChange(function(value) {
+        if (value[0] === "#") value = Utils.hexToRgb(value);
+        Graphics.shaders.particle.uniforms.uColor.value[0] = value[0] / 255.0;
+        Graphics.shaders.particle.uniforms.uColor.value[1] = value[1] / 255.0;
+        Graphics.shaders.particle.uniforms.uColor.value[2] = value[2] / 255.0;
+      });
+      this.gui.add(this.guiParams, "alpha", 0, 1).onChange(function(value) {
+        Graphics.shaders.particle.uniforms.uColor.value[3] = value;
+      });
+      this.gui.add(this.guiParams, "gravity", 0, 50).onFinishChange(function(value) {
+        Graphics.shaders.particleCompute.uniforms.uKForce.value = value;
+      });
+      this.gui.add(Graphics, "paused").listen();
+      this.gui.add(this.guiParams, "screenshot");
+      this.gui.add(this.guiParams, "reset");
     },
 
     initMouse: function() {

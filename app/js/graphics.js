@@ -9,7 +9,7 @@ define([
     Camera
   ) {
 
-  var PARTICLE_DIM = 512;
+  var PARTICLE_DIM = 1024;
   var CAMERA_FOV = Utils.radians(45.0);
   var CAMERA_NEAR = 0.1;
   var CAMERA_FAR = 1000.0;

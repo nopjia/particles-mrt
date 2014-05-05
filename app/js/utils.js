@@ -37,8 +37,12 @@ define([], function() {
 
     rgbToHex: function() {
       return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-    }
+    },
 
+    screenshotToNewWindow: function(canvas) {
+      var url = canvas.toDataURL();
+      window.open(url, "Screenshot", "width="+canvas.width+" height="+canvas.height+" scrollbars=no, resizable=yes");
+    }
 
   };
 

@@ -23,6 +23,7 @@ define([
 
   var App = {
 
+    canvas: null,
     stats: null,
     clock: null,
     gui: null,
@@ -39,7 +40,8 @@ define([
     camCtrlMode: false,
 
     init: function() {
-      Graphics.init($("#webgl-canvas")[0]);
+      this.canvas = $("#webgl-canvas")[0];
+      Graphics.init(this.canvas);
       this.clock = new Clock();
       this.initGUI();
       this.initKeyboard();
@@ -71,7 +73,9 @@ define([
         Alpha: 0.5,
         Gravity: 10.0,
         Drag: 0.01,
-        "Reset !": function() { Graphics.drawParticleInit(); }
+        Screenshot: function() { Utils.screenshotToNewWindow($("#webgl-canvas")[0]); },
+        Pause: function() { Graphics.paused = !Graphics.paused; },
+        Reset: function() { Graphics.drawParticleInit(); }
       };
 
       this.gui = new dat.GUI();
@@ -101,8 +105,9 @@ define([
       this.gui.add(this.guiParams, "Gravity", 0, 50).onFinishChange(function(value) {
         Graphics.shaders.particleCompute.uniforms.uKForce.value = value;
       });
-
-      this.gui.add(this.guiParams, "Reset !");
+      this.gui.add(this.guiParams, "Screenshot");
+      this.gui.add(this.guiParams, "Pause");
+      this.gui.add(this.guiParams, "Reset");
     },
 
     initKeyboard: function() {
@@ -133,10 +138,9 @@ define([
     },
 
     initMouse: function() {
-      // disable context menu
-      document.oncontextmenu = function() { return false; };
+      var dom = this.canvas;
 
-      var dom = $("#webgl-canvas")[0];
+      dom.oncontextmenu = function() { return false; };
 
       (function(self) {
         $(dom).mousemove(function(event) {
@@ -144,10 +148,13 @@ define([
           self.mouse.dy = event.pageY - self.mouse.y;
           self.mouse.x = event.pageX;
           self.mouse.y = event.pageY;
+          event.preventDefault();
         }).mousedown(function(event) {
           self.mouse.buttons[event.which] = true;
+          event.preventDefault();
         }).mouseup(function(event) {
           self.mouse.buttons[event.which] = false;
+          event.preventDefault();
         });
       })(this);
     },

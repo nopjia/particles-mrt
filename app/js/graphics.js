@@ -248,7 +248,7 @@ define([
         return false;
       }
 
-      gl.clearColor(0.0, 0.0, 0.0, 0.0);
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.disable(gl.DEPTH_TEST);
       gl.depthMask(false);
       gl.enable(gl.BLEND);

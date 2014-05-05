@@ -19,6 +19,7 @@ define([
   var ext1 = null;
 
   var Graphics = {
+    gl: null,
     canvas: null,
     width: -1,
     height: -1,
@@ -248,7 +249,9 @@ define([
         return false;
       }
 
-      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      this.gl = gl;
+
+      gl.clearColor(0.0, 0.0, 0.0, 0.0);
       gl.disable(gl.DEPTH_TEST);
       gl.depthMask(false);
       gl.enable(gl.BLEND);

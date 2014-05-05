@@ -73,9 +73,18 @@ define([
         Alpha: 0.5,
         Gravity: 10.0,
         Drag: 0.01,
-        Screenshot: function() { Utils.screenshotToNewWindow($("#webgl-canvas")[0]); },
-        Pause: function() { Graphics.paused = !Graphics.paused; },
-        Reset: function() { Graphics.drawParticleInit(); }
+        Screenshot: function() {
+          Graphics.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+          Graphics.draw();
+          Utils.screenshotToNewWindow($("#webgl-canvas")[0]);
+          Graphics.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+        },
+        Pause: function() {
+          Graphics.paused = !Graphics.paused;
+        },
+        Reset: function() {
+          Graphics.drawParticleInit();
+        }
       };
 
       this.gui = new dat.GUI();

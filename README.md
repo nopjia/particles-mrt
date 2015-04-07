@@ -19,5 +19,12 @@ If you do not have the extensions supported, you can try:
 1. Enable "WebGL Draft Extensions" (chrome://flags/#enable-webgl-draft-extensions)
 1. For Windows, you might also need to enable D3D11 (chrome://flags/#enable-d3d11)
 
+## Controls
+
+* Click - set gravity point
+* Space - pause
+* Alt+Click - rotate/zoom/pan camera
+* Shift+R - reset camera
+
 ---
 Copyright © 2015 Nop Jiarathanakul
